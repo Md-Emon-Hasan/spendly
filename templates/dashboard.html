@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Spendly{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper">
+    <div class="dash-container">
+        <!-- Header -->
+        <header class="dash-header">
+            <div class="header-left">
+                <p class="greeting">Welcome back, <strong>{{ session.username }}</strong>!</p>
+                <h1 class="dash-title">Overview</h1>
+            </div>
+            <div class="header-right">
+                <a href="{{ url_for('analytics.index') }}" class="btn-ghost">View Analytics</a>
+            </div>
+        </header>
+
+        <!-- Stats Row -->
+        <div class="stats-grid">
+            <div class="stat-card stat-primary">
+                <p class="stat-label">Remaining Balance</p>
+                <h2 class="stat-value">৳ {{ "%.2f"|format(balance|default(0)) }}</h2>
+            </div>
+            
+            <div class="stat-card">
+                <p class="stat-label">This Month's Savings</p>
+                <h2 class="stat-value">৳ {{ "%.2f"|format(curr_month_savings|default(0)) }}</h2>
+                {% if savings_diff and savings_diff > 0 %}
+                    <p class="stat-trend trend-up">↑ ৳{{ "%.0f"|format(savings_diff) }} more than last month</p>
+                {% elif savings_diff and savings_diff < 0 %}
+                    <p class="stat-trend trend-down">↓ ৳{{ "%.0f"|format(savings_diff|abs) }} less than last month</p>
+                {% else %}
+                    <p class="stat-trend">Same as last month</p>
+                {% endif %}
+            </div>
+
+            <div class="stat-card">
+                <p class="stat-label">Lifetime Cash Added</p>
+                <h2 class="stat-value">৳ {{ "%.2f"|format(total_income|default(0)) }}</h2>
+            </div>
+
+            <div class="stat-card">
+                <p class="stat-label">Lifetime Spent</p>
+                <h2 class="stat-value">৳ {{ "%.2f"|format(total_expense|default(0)) }}</h2>
+            </div>
+        </div>
+
+        <!-- Forms Row -->
+        <div class="forms-grid">
+            <!-- Add Expense -->
+            <div class="form-card">
+                <h3 class="card-title">Add Expense</h3>
+                <form action="{{ url_for('transactions.add_expense') }}" method="POST" class="dash-form">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" name="date" class="form-input" required value="{{ current_date }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category_id" class="form-input" required>
+                            <option value="">Select Category</option>
+                            {% for c in categories %}
+                            <option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (৳)</label>
+                        <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 150" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Short Note</label>
+                        <input type="text" name="description" class="form-input" placeholder="e.g. Lunch, Wifi Bill" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn-primary w-full">Record Expense</button>
+                </form>
+            </div>
+
+            <!-- Cash In -->
+            <div class="form-card">
+                <h3 class="card-title">Cash In / Add Income</h3>
+                <form action="{{ url_for('transactions.cash_in') }}" method="POST" class="dash-form">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" name="date" class="form-input" required value="{{ current_date }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (৳)</label>
+                        <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 5000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Source</label>
+                        <select name="description" class="form-input" required>
+                            <option value="">Select Source</option>
+                            <option value="From Home/Family">From Home/Family</option>
+                            <option value="Salary/Wages">Salary/Wages</option>
+                            <option value="Freelancing/Part-time">Freelancing/Part-time</option>
+                            <option value="Borrow/Loan">Borrow/Loan</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-success w-full" style="margin-top: auto;">Add Cash</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tables Row -->
+        <div class="tables-grid">
+            <!-- Recent Expenses -->
+            <div class="table-card">
+                <h3 class="card-title">Recent Expenses</h3>
+                <div class="table-responsive">
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Note</th>
+                                <th class="text-right">Amount</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in recent_expenses %}
+                            <tr>
+                                <td>{{ e.date.split(' ')[0] }}</td>
+                                <td><span class="cat-pill">{{ e.category_icon }} {{ e.category_name }}</span></td>
+                                <td>{{ e.description or '-' }}</td>
+                                <td class="text-right amount-out">- ৳{{ "%.2f"|format(e.amount) }}</td>
+                                <td class="text-right actions-cell">
+                                    <button class="action-btn edit-btn" onclick="openExpenseModal({{ e.id }}, '{{ e.date.split(' ')[0] }}', {{ e.category_id }}, {{ e.amount }}, '{{ e.description }}')">✏️</button>
+                                    <form action="{{ url_for('transactions.delete_expense', id=e.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this expense?');">
+                                        <button type="submit" class="action-btn delete-btn">🗑️</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center empty-state">No recent expenses.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Incomes -->
+            <div class="table-card">
+                <h3 class="card-title">Recent Cash-In</h3>
+                <div class="table-responsive">
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Source</th>
+                                <th class="text-right">Amount</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in recent_incomes %}
+                            <tr>
+                                <td>{{ i.date.split(' ')[0] }}</td>
+                                <td>{{ i.description }}</td>
+                                <td class="text-right amount-in">+ ৳{{ "%.2f"|format(i.amount) }}</td>
+                                <td class="text-right actions-cell">
+                                    <button class="action-btn edit-btn" onclick="openIncomeModal({{ i.id }}, '{{ i.date.split(' ')[0] }}', {{ i.amount }}, '{{ i.description }}')">✏️</button>
+                                    <form action="{{ url_for('transactions.delete_income', id=i.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this income?');">
+                                        <button type="submit" class="action-btn delete-btn">🗑️</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center empty-state">No recent income.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Edit Expense Modal -->
+<div id="editExpenseModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('editExpenseModal')">&times;</span>
+        <h3 class="card-title">Edit Expense</h3>
+        <form id="editExpenseForm" method="POST" class="dash-form">
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="edit_exp_date" name="date" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="edit_exp_category_id" name="category_id" class="form-input" required>
+                    <option value="">Select Category</option>
+                    {% for c in categories %}
+                    <option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount (৳)</label>
+                <input type="number" step="0.01" id="edit_exp_amount" name="amount" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label>Short Note</label>
+                <input type="text" id="edit_exp_desc" name="description" class="form-input" autocomplete="off">
+            </div>
+            <button type="submit" class="btn-primary w-full">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Income Modal -->
+<div id="editIncomeModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('editIncomeModal')">&times;</span>
+        <h3 class="card-title">Edit Cash-in</h3>
+        <form id="editIncomeForm" method="POST" class="dash-form">
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="edit_inc_date" name="date" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label>Amount (৳)</label>
+                <input type="number" step="0.01" id="edit_inc_amount" name="amount" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label>Source</label>
+                <select id="edit_inc_desc" name="description" class="form-input" required>
+                    <option value="From Home/Family">From Home/Family</option>
+                    <option value="Salary/Wages">Salary/Wages</option>
+                    <option value="Freelancing/Part-time">Freelancing/Part-time</option>
+                    <option value="Borrow/Loan">Borrow/Loan</option>
+                    <option value="Others">Others</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-success w-full">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openExpenseModal(id, date, catId, amount, desc) {
+        document.getElementById('edit_exp_date').value = date;
+        document.getElementById('edit_exp_category_id').value = catId;
+        document.getElementById('edit_exp_amount').value = amount;
+        document.getElementById('edit_exp_desc').value = desc === 'None' ? '' : desc;
+        document.getElementById('editExpenseForm').action = "/expenses/" + id + "/edit";
+        document.getElementById('editExpenseModal').style.display = "block";
+    }
+
+    function openIncomeModal(id, date, amount, desc) {
+        document.getElementById('edit_inc_date').value = date;
+        document.getElementById('edit_inc_amount').value = amount;
+        document.getElementById('edit_inc_desc').value = desc;
+        document.getElementById('editIncomeForm').action = "/incomes/" + id + "/edit";
+        document.getElementById('editIncomeModal').style.display = "block";
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('editExpenseModal')) {
+            closeModal('editExpenseModal');
+        }
+        if (event.target == document.getElementById('editIncomeModal')) {
+            closeModal('editIncomeModal');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — Spendly{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper">
+    <div class="dash-container">
+        
+        <!-- Header & Filter -->
+        <header class="dash-header analytics-header">
+            <div class="header-left">
+                <h1 class="dash-title">Analytics & Insights</h1>
+                <p class="greeting">Deep dive into your financial habits.</p>
+            </div>
+            
+            <div class="header-right">
+                <form method="GET" action="{{ url_for('analytics.index') }}" class="month-filter-form">
+                    <select name="month" class="form-input select-month" onchange="this.form.submit()">
+                        {% for m in all_months %}
+                            <option value="{{ m }}" {% if m == selected %}selected{% endif %}>
+                                {{ m }}
+                            </option>
+                        {% else %}
+                            <option value="">No data available</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </header>
+
+        <!-- Selected Month Overview -->
+        <h3 class="section-title">Overview: {{ selected_label }}</h3>
+        <div class="stats-grid stats-3">
+            <div class="stat-card">
+                <p class="stat-label">Total Cash In</p>
+                <h2 class="stat-value amount-in">৳ {{ "%.2f"|format(sm_income|default(0)) }}</h2>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Total Spent</p>
+                <h2 class="stat-value amount-out">৳ {{ "%.2f"|format(sm_expense|default(0)) }}</h2>
+            </div>
+            <div class="stat-card {% if sm_saved >= 0 %}stat-primary{% else %}stat-danger{% endif %}">
+                <p class="stat-label">Saved this month</p>
+                <h2 class="stat-value">৳ {{ "%.2f"|format(sm_saved|default(0)) }}</h2>
+            </div>
+        </div>
+
+        <div class="analytics-grid">
+            <!-- Category Breakdown -->
+            <div class="card-full">
+                <h3 class="card-title">Where your money went ({{ selected_label }})</h3>
+                
+                <div class="cat-bars-container">
+                    {% for cat in cat_breakdown %}
+                    <div class="cat-bar-row">
+                        <div class="cat-info">
+                            <span class="cat-icon">{{ cat.icon }}</span>
+                            <span class="cat-name">{{ cat.name }}</span>
+                        </div>
+                        <div class="cat-track">
+                            <div class="cat-fill" style="width: {{ (cat.total / max_cat_amount * 100)|round }}%;"></div>
+                        </div>
+                        <div class="cat-amount">৳ {{ "%.0f"|format(cat.total) }}</div>
+                    </div>
+                    {% else %}
+                    <p class="empty-state">No expenses recorded for this month.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Month over Month Trend -->
+            <div class="card-full">
+                <h3 class="card-title">6-Month Trend</h3>
+                <div class="table-responsive">
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th class="text-right">Cash In</th>
+                                <th class="text-right">Spent</th>
+                                <th class="text-right">Saved</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in monthly_trend %}
+                            <tr>
+                                <td><strong>{{ t.label }}</strong></td>
+                                <td class="text-right amount-in">৳{{ "%.0f"|format(t.income) }}</td>
+                                <td class="text-right amount-out">৳{{ "%.0f"|format(t.expense) }}</td>
+                                <td class="text-right {% if t.saved >= 0 %}amount-in{% else %}amount-out{% endif %}">
+                                    ৳{{ "%.0f"|format(t.saved) }}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center empty-state">No historic data available.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lifetime Stats -->
+        <h3 class="section-title" style="margin-top: 2rem;">Lifetime Account Summary</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <p class="stat-label">Total Transactions</p>
+                <h2 class="stat-value">{{ total_transactions + total_cashins }}</h2>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Lifetime Cash Added</p>
+                <h2 class="stat-value amount-in">৳ {{ "%.2f"|format(total_income|default(0)) }}</h2>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Lifetime Spent</p>
+                <h2 class="stat-value amount-out">৳ {{ "%.2f"|format(total_expense|default(0)) }}</h2>
+            </div>
+            <div class="stat-card stat-primary">
+                <p class="stat-label">Lifetime Savings</p>
+                <h2 class="stat-value">৳ {{ "%.2f"|format(lifetime_saved|default(0)) }}</h2>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

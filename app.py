@@ -1,60 +1,35 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, session, redirect, url_for
+from database.connection import close_db
+
+# Import Blueprints
+from routes.auth import auth_bp
+from routes.dashboard import dashboard_bp
+from routes.analytics import analytics_bp
+from routes.transactions import transactions_bp
 
 app = Flask(__name__)
+app.secret_key = "super_secret_bachelor_key_123"
 
+# Register teardown function to close DB after request
+app.teardown_appcontext(close_db)
 
-# ------------------------------------------------------------------ #
-# Routes                                                              #
-# ------------------------------------------------------------------ #
+# Register Blueprints
+app.register_blueprint(auth_bp)
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(analytics_bp)
+app.register_blueprint(transactions_bp)
 
+# Root Landing Route
 @app.route("/")
 def landing():
+    if "user_id" in session:
+        return redirect(url_for("dashboard.index"))
     return render_template("landing.html")
 
-
-@app.route("/register")
-def register():
-    return render_template("register.html")
-
-
-@app.route("/login")
-def login():
-    return render_template("login.html")
-
-
-# ------------------------------------------------------------------ #
-# Placeholder routes — students will implement these                  #
-# ------------------------------------------------------------------ #
-
+# Terms Route
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
-
-
-@app.route("/logout")
-def logout():
-    return "Logout — coming in Step 3"
-
-
-@app.route("/profile")
-def profile():
-    return "Profile page — coming in Step 4"
-
-
-@app.route("/expenses/add")
-def add_expense():
-    return "Add expense — coming in Step 7"
-
-
-@app.route("/expenses/<int:id>/edit")
-def edit_expense(id):
-    return "Edit expense — coming in Step 8"
-
-
-@app.route("/expenses/<int:id>/delete")
-def delete_expense(id):
-    return "Delete expense — coming in Step 9"
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
