@@ -109,3 +109,55 @@ def delete_expense(id):
     conn.execute("DELETE FROM expenses WHERE id=? AND user_id=?", (id, session["user_id"]))
     conn.commit()
     return redirect(url_for("dashboard.index"))
+
+# --- History / All Transactions Route ---
+
+@transactions_bp.route("/history")
+def history():
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+        
+    uid = session["user_id"]
+    conn = get_db()
+    
+    filter_month = request.args.get("month", "")
+    filter_cat = request.args.get("category_id", "")
+    filter_type = request.args.get("type", "")
+    
+    expenses = []
+    if not filter_type or filter_type == "expense":
+        query = "SELECT e.id, e.date, c.name as category_name, c.icon as category_icon, e.amount, e.description, 'expense' as txn_type, e.category_id FROM expenses e JOIN categories c ON e.category_id = c.id WHERE e.user_id = ?"
+        params = [uid]
+        if filter_month:
+            query += " AND strftime('%Y-%m', e.date) = ?"
+            params.append(filter_month)
+        if filter_cat:
+            query += " AND e.category_id = ?"
+            params.append(filter_cat)
+        
+        expenses_raw = conn.execute(query, params).fetchall()
+        expenses = [dict(r) for r in expenses_raw]
+        
+    incomes = []
+    if not filter_type or filter_type == "income":
+        if not filter_cat:  # incomes don't have category_id
+            query = "SELECT id, date, 'Income' as category_name, '💰' as category_icon, amount, description, 'income' as txn_type, NULL as category_id FROM incomes WHERE user_id = ?"
+            params = [uid]
+            if filter_month:
+                query += " AND strftime('%Y-%m', date) = ?"
+                params.append(filter_month)
+            incomes_raw = conn.execute(query, params).fetchall()
+            incomes = [dict(r) for r in incomes_raw]
+
+    all_txns = sorted(expenses + incomes, key=lambda x: x["date"], reverse=True)
+    categories = conn.execute("SELECT * FROM categories ORDER BY name").fetchall()
+    
+    # Get distinct months
+    income_months = conn.execute("SELECT DISTINCT strftime('%Y-%m', date) as m FROM incomes WHERE user_id=?", (uid,)).fetchall()
+    expense_months = conn.execute("SELECT DISTINCT strftime('%Y-%m', date) as m FROM expenses WHERE user_id=?", (uid,)).fetchall()
+    all_months = sorted(set(r["m"] for r in income_months) | set(r["m"] for r in expense_months), reverse=True)
+    
+    from flask import render_template
+    return render_template("history.html", transactions=all_txns, categories=categories, 
+                           filter_month=filter_month, filter_cat=filter_cat, filter_type=filter_type,
+                           all_months=all_months)

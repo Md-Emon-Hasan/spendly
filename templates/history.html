@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction History — Spendly{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper">
+    <div class="dash-container">
+        <!-- Header -->
+        <header class="dash-header">
+            <div class="header-left">
+                <h1 class="dash-title">All Transactions</h1>
+            </div>
+            <div class="header-right" style="display: flex; gap: 10px;">
+                <a href="{{ url_for('export.export_transactions') }}" class="btn-success">Export to CSV</a>
+            </div>
+        </header>
+
+        <!-- Filters Section -->
+        <div class="form-card" style="margin-bottom: 2rem;">
+            <form method="GET" action="{{ url_for('transactions.history') }}" class="filters-form"
+                style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1 1 150px; margin-bottom: 0;">
+                    <label>Month</label>
+                    <select name="month" class="form-input">
+                        <option value="">All Time</option>
+                        {% for m in all_months %}
+                        <option value="{{ m }}" {% if m==filter_month %}selected{% endif %}>{{ m }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="flex: 1 1 150px; margin-bottom: 0;">
+                    <label>Type</label>
+                    <select name="type" class="form-input">
+                        <option value="">All Types</option>
+                        <option value="expense" {% if filter_type=='expense' %}selected{% endif %}>Expense</option>
+                        <option value="income" {% if filter_type=='income' %}selected{% endif %}>Income</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="flex: 1 1 200px; margin-bottom: 0;">
+                    <label>Category</label>
+                    <select name="category_id" class="form-input">
+                        <option value="">All Categories</option>
+                        {% for c in categories %}
+                        <option value="{{ c.id }}" {% if filter_cat==c.id|string %}selected{% endif %}>{{ c.icon }} {{
+                            c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex: 1 1 auto; justify-content: flex-end;">
+                    <button type="submit" class="btn-primary" style="padding: 0.6rem 1.5rem;">Filter</button>
+                    <a href="{{ url_for('transactions.history') }}" class="btn-ghost"
+                        style="padding: 0.6rem 1.5rem; text-decoration: none;">Clear</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="table-card" style="grid-column: span 2;">
+            <h3 class="card-title">Transactions</h3>
+            <div class="table-responsive">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Note</th>
+                            <th class="text-right">Amount</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for txn in transactions %}
+                        <tr>
+                            <td>
+                                {% if txn.txn_type == 'expense' %}
+                                <span class="trend-down">Expense</span>
+                                {% else %}
+                                <span class="trend-up">Income</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ txn.date.split(' ')[0] }}</td>
+                            <td><span class="cat-pill">{{ txn.category_icon }} {{ txn.category_name }}</span></td>
+                            <td>{{ txn.description or '-' }}</td>
+                            <td
+                                class="text-right {% if txn.txn_type == 'expense' %}amount-out{% else %}amount-in{% endif %}">
+                                {% if txn.txn_type == 'expense' %}-{% else %}+{% endif %} ৳{{ "%.2f"|format(txn.amount)
+                                }}
+                            </td>
+                            <td class="text-right actions-cell">
+                                {% if txn.txn_type == 'expense' %}
+                                <form action="{{ url_for('transactions.delete_expense', id=txn.id) }}" method="POST"
+                                    class="inline-form"
+                                    onsubmit="return confirm('Are you sure you want to delete this expense?');">
+                                    <button type="submit" class="action-btn delete-btn">🗑️</button>
+                                </form>
+                                {% else %}
+                                <form action="{{ url_for('transactions.delete_income', id=txn.id) }}" method="POST"
+                                    class="inline-form"
+                                    onsubmit="return confirm('Are you sure you want to delete this income?');">
+                                    <button type="submit" class="action-btn delete-btn">🗑️</button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center empty-state">No transactions found for these filters.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

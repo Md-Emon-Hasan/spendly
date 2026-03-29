@@ -38,6 +38,24 @@ def index():
 
     sm_saved = sm_income - sm_expense
 
+    # Month-over-Month (MoM) calculation
+    selected_dt = datetime.strptime(selected, "%Y-%m")
+    if selected_dt.month == 1:
+        prev_month_str = f"{selected_dt.year - 1}-12"
+    else:
+        prev_month_str = f"{selected_dt.year}-{selected_dt.month - 1:02d}"
+
+    pm_expense = conn.execute(
+        "SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE user_id=? AND strftime('%Y-%m',date)=?",
+        (uid, prev_month_str),
+    ).fetchone()["t"]
+    
+    mom_change_percent = 0
+    if pm_expense > 0:
+        mom_change_percent = ((sm_expense - pm_expense) / pm_expense) * 100
+    elif sm_expense > 0:
+        mom_change_percent = 100
+
     cat_breakdown = conn.execute("""
         SELECT c.name, c.icon, COALESCE(SUM(e.amount),0) as total
         FROM categories c LEFT JOIN expenses e ON c.id = e.category_id
@@ -83,6 +101,42 @@ def index():
             "income": m_in, "expense": m_out, "saved": m_in - m_out,
         })
 
+    ### Behavioral Analytics (Phase 2) ###
+    
+    # 1. Top 3 Expenses
+    top_expenses = conn.execute("""
+        SELECT e.description, e.amount, c.icon, c.name, e.date
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE e.user_id = ? AND strftime('%Y-%m', e.date) = ?
+        ORDER BY e.amount DESC
+        LIMIT 3
+    """, (uid, selected)).fetchall()
+
+    # 2. Day of Week Analysis (0=Sunday ... 6=Saturday)
+    dow_expenses = conn.execute("""
+        SELECT strftime('%w', date) as dow, SUM(amount) as total
+        FROM expenses
+        WHERE user_id = ? AND strftime('%Y-%m', date) = ?
+        GROUP BY dow
+    """, (uid, selected)).fetchall()
+    
+    dow_map = {"0": "Sun", "1": "Mon", "2": "Tue", "3": "Wed", "4": "Thu", "5": "Fri", "6": "Sat"}
+    
+    dow_data = [{"dow": dow_map[str(i)], "total": 0} for i in range(7)]
+    for x in dow_expenses:
+        dow_data[int(x["dow"])]["total"] = x["total"]
+        
+    highest_dow = max(dow_data, key=lambda x: x["total"]) if sm_expense > 0 else None
+
+    ### Budget Usage ###
+    budget_row = conn.execute(
+        "SELECT amount FROM budgets WHERE user_id=? AND category_id IS NULL AND month=?",
+        (uid, selected)
+    ).fetchone()
+    monthly_budget = budget_row["amount"] if budget_row else 0
+    budget_used_percent = round(min(100, (sm_expense / monthly_budget) * 100), 1) if monthly_budget > 0 else 0
+
     try:
         selected_label = datetime.strptime(selected, "%Y-%m").strftime("%B %Y")
     except ValueError:
@@ -104,4 +158,10 @@ def index():
         total_transactions=total_transactions,
         total_cashins=total_cashins,
         monthly_trend=monthly_trend,
+        mom_change_percent=mom_change_percent,
+        top_expenses=top_expenses,
+        dow_data=dow_data,
+        highest_dow=highest_dow,
+        monthly_budget=monthly_budget,
+        budget_used_percent=budget_used_percent,
     )

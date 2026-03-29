@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Savings Goals — Spendly{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper">
+    <div class="dash-container">
+        <!-- Header -->
+        <header class="dash-header">
+            <div class="header-left">
+                <h1 class="dash-title">Savings Goals</h1>
+                <p class="text-secondary">Track and allocate funds for your specific targets.</p>
+            </div>
+            <div class="header-right">
+                <button class="btn-success" onclick="document.getElementById('addGoalModal').style.display='block'">+
+                    New Goal</button>
+            </div>
+        </header>
+
+        <!-- Goals Grid -->
+
+        <!-- Monthly Budget Usage -->
+        {% if monthly_budget > 0 %}
+        <div
+            style="background: var(--surface); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                <span style="font-weight: 500;">Overall Monthly Budget</span>
+                <span style="color: var(--text-secondary);">৳{{ "%.2f"|format(cm_expense|default(0)) }} / ৳{{
+                    "%.2f"|format(monthly_budget) }}</span>
+            </div>
+            <div class="progress-bar-bg"
+                style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
+                <div class="progress-fill"
+                    style="width: {{ budget_used_percent }}%; height: 100%; background: {% if budget_used_percent > 90 %}var(--danger){% elif budget_used_percent > 75 %}#F59E0B{% else %}var(--primary){% endif %}; transition: width 0.3s ease;">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+            {% for goal in goals %}
+            <div class="stat-card" style="position: relative;">
+
+                <form action="{{ url_for('goals.delete_goal', id=goal.id) }}" method="POST" class="inline-form"
+                    onsubmit="return confirm('Delete this goal completely?');"
+                    style="position: absolute; top: 1rem; right: 1rem;">
+                    <button type="submit" class="action-btn delete-btn"
+                        style="background: var(--surface); border: 1px solid var(--border);">🗑️</button>
+                </form>
+
+                <p class="stat-label" style="font-size: 1.1rem; font-weight: 500; color: var(--text-primary);">{{
+                    goal.name }}</p>
+                <h2 class="stat-value" style="font-size: 1.5rem; margin: 0.5rem 0;">৳{{
+                    "%.2f"|format(goal.current_amount) }} <span
+                        style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 400;">/ ৳{{
+                        "%.0f"|format(goal.target_amount) }}</span></h2>
+
+                <!-- Progress Bar -->
+                <div class="progress-bar-bg"
+                    style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
+                    <div class="progress-fill"
+                        style="width: {{ goal.progress }}%; height: 100%; background: {% if goal.progress >= 100 %}var(--success){% else %}var(--primary){% endif %}; transition: width 0.3s ease;">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="text-secondary" style="font-size: 0.85rem;">
+                        {% if goal.deadline %}Due: {{ goal.deadline }}{% else %}No deadline{% endif %}
+                    </span>
+
+                    {% if goal.progress >= 100 %}
+                    <span class="trend-up" style="font-weight: 600; font-size: 0.9rem;">Goal Reached! 🎉</span>
+                    {% else %}
+                    <button class="btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;"
+                        onclick="openAddFundsModal({{ goal.id }}, '{{ goal.name }}')">Add Funds</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="stat-card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                <p class="text-secondary" style="margin-bottom: 1rem;">You haven't set any savings goals yet.</p>
+                <button class="btn-primary"
+                    onclick="document.getElementById('addGoalModal').style.display='block'">Create Your First
+                    Goal</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Goal Modal -->
+<div id="addGoalModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('addGoalModal')">&times;</span>
+        <h3 class="card-title">Create a New Goal</h3>
+        <form method="POST" action="{{ url_for('goals.add_goal') }}" class="dash-form">
+            <div class="form-group">
+                <label>Goal Name</label>
+                <input type="text" name="name" class="form-input" placeholder="e.g. New Laptop" required>
+            </div>
+            <div class="form-group">
+                <label>Target Amount (৳)</label>
+                <input type="number" step="0.01" name="target_amount" class="form-input" placeholder="e.g. 50000"
+                    required>
+            </div>
+            <div class="form-group">
+                <label>Deadline (Optional)</label>
+                <input type="date" name="deadline" class="form-input">
+            </div>
+            <button type="submit" class="btn-primary w-full">Create Goal</button>
+        </form>
+    </div>
+</div>
+
+<!-- Add Funds Modal -->
+<div id="addFundsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('addFundsModal')">&times;</span>
+        <h3 class="card-title">Add Funds to <span id="add_funds_goal_name">Goal</span></h3>
+        <form id="addFundsForm" method="POST" class="dash-form">
+            <div class="form-group">
+                <label>Amount to Add (৳)</label>
+                <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 500" required>
+            </div>
+            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1rem;">This amount will be added to your
+                goal's current progress. It does not deduct from your actual bank balance in this system, it just
+                allocates it.</p>
+            <button type="submit" class="btn-success w-full">Add Funds</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openAddFundsModal(id, name) {
+        document.getElementById('add_funds_goal_name').innerText = name;
+        document.getElementById('addFundsForm').action = "/goals/" + id + "/add_funds";
+        document.getElementById('addFundsModal').style.display = "block";
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    window.onclick = function (event) {
+        if (event.target == document.getElementById('addGoalModal')) {
+            closeModal('addGoalModal');
+        }
+        if (event.target == document.getElementById('addFundsModal')) {
+            closeModal('addFundsModal');
+        }
+    }
+</script>
+{% endblock %}

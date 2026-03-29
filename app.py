@@ -6,6 +6,9 @@ from routes.auth import auth_bp
 from routes.dashboard import dashboard_bp
 from routes.analytics import analytics_bp
 from routes.transactions import transactions_bp
+from routes.budgets import budgets_bp
+from routes.export import export_bp
+from routes.goals import goals_bp
 
 app = Flask(__name__)
 app.secret_key = "super_secret_bachelor_key_123"
@@ -18,6 +21,9 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(transactions_bp)
+app.register_blueprint(budgets_bp)
+app.register_blueprint(export_bp)
+app.register_blueprint(goals_bp)
 
 # Root Landing Route
 @app.route("/")
