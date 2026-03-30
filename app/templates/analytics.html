@@ -146,7 +146,7 @@
                         <tbody>
                             {% for e in top_expenses %}
                             <tr>
-                                <td>{{ e.date.split(' ')[0] }}</td>
+                                <td>{{ e.date|format_date }}</td>
                                 <td><strong>{{ e.icon }} {{ e.name }}</strong><br><span
                                         style="font-size:0.85rem; color:var(--text-secondary);">{{ e.description or 'No
                                         note' }}</span></td>

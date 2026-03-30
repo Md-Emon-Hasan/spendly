@@ -82,7 +82,7 @@
                                 <span class="trend-up">Income</span>
                                 {% endif %}
                             </td>
-                            <td>{{ txn.date.split(' ')[0] }}</td>
+                            <td>{{ txn.date|format_date }}</td>
                             <td><span class="cat-pill">{{ txn.category_icon }} {{ txn.category_name }}</span></td>
                             <td>{{ txn.description or '-' }}</td>
                             <td

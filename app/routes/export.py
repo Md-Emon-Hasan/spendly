@@ -31,7 +31,9 @@ def export_transactions():
     writer.writerow(['Date', 'Type', 'Category', 'Description', 'Amount'])
     
     for row in all_txns:
-        writer.writerow([row["date"], row["type"], row["category"], row["description"], f"{row['amount']:.2f}"])
+        # Match the date format in the CSV with the UI
+        d = row["date"].strftime("%Y-%m-%d") if hasattr(row["date"], "strftime") else str(row["date"]).split(' ')[0]
+        writer.writerow([d, row["type"], row["category"], row["description"], f"{row['amount']:.2f}"])
         
     return Response(
         output.getvalue(),

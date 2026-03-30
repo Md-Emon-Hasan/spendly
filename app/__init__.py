@@ -6,6 +6,16 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # --- Jinja Filters ---
+    @app.template_filter('format_date')
+    def format_date_filter(value):
+        if not value:
+            return ""
+        if hasattr(value, 'strftime'):
+            return value.strftime('%Y-%m-%d')
+        # If it's a string, just take the date part
+        return str(value).split(' ')[0]
+
     # Register blueprints
     from .routes.auth import auth_bp
     from .routes.dashboard import dashboard_bp
