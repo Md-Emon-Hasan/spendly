@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: spendly
+    env: python
+    buildCommand: pip install -r requirements.txt && python init_db.py
+    startCommand: gunicorn wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: spendly-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+databases:
+  - name: spendly-db
+    plan: free

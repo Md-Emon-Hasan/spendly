@@ -1,8 +1,13 @@
 venv/
-expense_tracker.db
 __pycache__/
 *.pyc
 *.pyo
 .env
 .DS_Store
-.claude/plans/
+.claude/
+database/spendly.db
+database/__pycache__/
+app/__pycache__/
+app/routes/__pycache__/
+app/database/__pycache__/
+C:/Users/codix/OneDrive/Desktop/New folder/spendly/database/spendly.db
