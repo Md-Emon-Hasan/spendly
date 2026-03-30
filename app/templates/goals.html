@@ -49,7 +49,11 @@
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
                         <button class="action-btn edit-btn"
-                            onclick="openEditGoalModal({{ goal.id }}, {{ goal.name|tojson|forceescape }}, {{ goal.target_amount|default(0) }}, {{ (goal.deadline if goal.deadline else '')|tojson|forceescape }})">✏ Edit</button>
+                            data-id="{{ goal.id }}"
+                            data-name="{{ goal.name }}"
+                            data-target="{{ goal.target_amount }}"
+                            data-deadline="{{ goal.deadline or '' }}"
+                            onclick="openEditGoalModal(this)">✏ Edit</button>
                         <button class="action-btn delete-btn"
                             data-url="{{ url_for('goals.delete_goal', id=goal.id) }}"
                             data-msg="Delete goal &quot;{{ goal.name }}&quot; permanently? All fund history will also be deleted."
@@ -94,7 +98,9 @@
                     <span style="color: var(--success); font-weight: 600; font-size: 0.95rem;">🎉 Goal Reached!</span>
                     {% else %}
                     <button class="btn-primary" style="padding: 0.45rem 1.25rem; font-size: 0.85rem;"
-                        onclick="openAddFundsModal({{ goal.id }}, {{ goal.name|tojson|forceescape }})">+ Add Funds</button>
+                        data-id="{{ goal.id }}"
+                        data-name="{{ goal.name }}"
+                        onclick="openAddFundsModal(this)">+ Add Funds</button>
                     {% endif %}
                 </div>
 
@@ -208,13 +214,20 @@
         document.getElementById(id).style.display = 'none';
     }
 
-    function openAddFundsModal(id, name) {
+    function openAddFundsModal(btn) {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
         document.getElementById('add_funds_goal_name').textContent = name;
         document.getElementById('addFundsForm').action = '/goals/' + id + '/add_funds';
         openModal('addFundsModal');
     }
 
-    function openEditGoalModal(id, name, target, deadline) {
+    function openEditGoalModal(btn) {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
+        const target = btn.getAttribute('data-target');
+        const deadline = btn.getAttribute('data-deadline');
+
         document.getElementById('edit_goal_name').value = name;
         document.getElementById('edit_goal_target').value = target;
         document.getElementById('edit_goal_deadline').value = deadline || '';
