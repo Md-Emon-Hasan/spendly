@@ -1,5 +1,5 @@
 from flask import Blueprint, session, redirect, url_for, Response
-from database.connection import get_db
+from ..database.connection import get_db
 import csv
 import io
 

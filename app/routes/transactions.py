@@ -1,6 +1,6 @@
 from flask import Blueprint, request, session, redirect, url_for, flash
 from datetime import datetime
-from database.connection import get_db
+from ..database.connection import get_db
 
 transactions_bp = Blueprint('transactions', __name__)
 

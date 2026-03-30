@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for
 from datetime import datetime, timedelta
 import calendar
-from database.connection import get_db
+from ..database.connection import get_db
 
 dashboard_bp = Blueprint('dashboard', __name__)
 

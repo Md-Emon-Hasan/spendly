@@ -11,6 +11,17 @@
         href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Add global animation styles here to bypass cache completely without modifying CSS files -->
+    <style>
+        @keyframes fillProgress {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
+        }
+        .progress-fill, .cat-fill {
+            transform-origin: left center !important;
+            animation: fillProgress 1.2s cubic-bezier(0.1, 0.9, 0.2, 1) forwards !important;
+        }
+    </style>
     {% block head %}{% endblock %}
 </head>
 

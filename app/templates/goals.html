@@ -31,7 +31,7 @@
             <div class="progress-bar-bg"
                 style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
                 <div class="progress-fill"
-                    style="width: {{ budget_used_percent }}%; height: 100%; background: {% if budget_used_percent > 90 %}var(--danger){% elif budget_used_percent > 75 %}#F59E0B{% else %}var(--primary){% endif %}; transition: width 0.3s ease;">
+                    style="width: {{ budget_used_percent }}%; height: 100%; background: {% if budget_used_percent > 90 %}var(--danger){% elif budget_used_percent > 75 %}var(--warning){% else %}var(--primary){% endif %}; transition: width 0.8s ease-out;">
                 </div>
             </div>
         </div>
@@ -59,7 +59,7 @@
                 <div class="progress-bar-bg"
                     style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
                     <div class="progress-fill"
-                        style="width: {{ goal.progress }}%; height: 100%; background: {% if goal.progress >= 100 %}var(--success){% else %}var(--primary){% endif %}; transition: width 0.3s ease;">
+                        style="width: {{ goal.progress }}%; height: 100%; background: {% if goal.progress >= 100 %}var(--success){% else %}var(--primary){% endif %}; transition: width 0.8s ease-out;">
                     </div>
                 </div>
 

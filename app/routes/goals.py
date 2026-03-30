@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from database.connection import get_db
+from ..database.connection import get_db
 from datetime import datetime
 
 goals_bp = Blueprint('goals', __name__)

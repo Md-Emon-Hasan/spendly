@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from datetime import datetime
-from database.connection import get_db
+from ..database.connection import get_db
 
 analytics_bp = Blueprint('analytics', __name__)
 

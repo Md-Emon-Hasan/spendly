@@ -1,5 +1,5 @@
 from flask import Blueprint, request, session, redirect, url_for
-from database.connection import get_db
+from ..database.connection import get_db
 
 budgets_bp = Blueprint('budgets', __name__)
 
