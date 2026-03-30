@@ -85,14 +85,14 @@
                             <td class="text-right actions-cell">
                                 {% if txn.txn_type == 'expense' %}
                                 <button class="action-btn edit-btn"
-                                    onclick="openExpenseModal({{ txn.id }}, '{{ txn.date|format_date }}', {{ txn.category_id or 0 }}, {{ txn.amount }}, {{ txn.description|tojson }})">✏ Edit</button>
+                                    onclick="openExpenseModal({{ txn.id }}, '{{ txn.date|format_date }}', {{ txn.category_id or 0 }}, {{ txn.amount }}, {{ txn.description|tojson|forceescape }})">✏ Edit</button>
                                 <button class="action-btn delete-btn"
                                     data-url="{{ url_for('transactions.delete_expense', id=txn.id) }}"
                                     data-msg="Delete ৳{{ '%.2f'|format(txn.amount) }} ({{ txn.category_name }}) expense?"
                                     onclick="openDeleteModal(this)">✕ Delete</button>
                                 {% else %}
                                 <button class="action-btn edit-btn"
-                                    onclick="openIncomeModal({{ txn.id }}, '{{ txn.date|format_date }}', {{ txn.amount }}, {{ txn.description|tojson }})">✏ Edit</button>
+                                    onclick="openIncomeModal({{ txn.id }}, '{{ txn.date|format_date }}', {{ txn.amount }}, {{ txn.description|tojson|forceescape }})">✏ Edit</button>
                                 <button class="action-btn delete-btn"
                                     data-url="{{ url_for('transactions.delete_income', id=txn.id) }}"
                                     data-msg="Delete ৳{{ '%.2f'|format(txn.amount) }} income?"

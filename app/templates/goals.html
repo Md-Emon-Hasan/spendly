@@ -49,7 +49,7 @@
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
                         <button class="action-btn edit-btn"
-                            onclick="openEditGoalModal({{ goal.id }}, {{ goal.name|tojson }}, {{ goal.target_amount|default(0) }}, '{{ goal.deadline if goal.deadline else "" }}')">✏ Edit</button>
+                            onclick="openEditGoalModal({{ goal.id }}, {{ goal.name|tojson|forceescape }}, {{ goal.target_amount|default(0) }}, {{ (goal.deadline if goal.deadline else '')|tojson|forceescape }})">✏ Edit</button>
                         <button class="action-btn delete-btn"
                             data-url="{{ url_for('goals.delete_goal', id=goal.id) }}"
                             data-msg="Delete goal &quot;{{ goal.name }}&quot; permanently? All fund history will also be deleted."
@@ -94,7 +94,7 @@
                     <span style="color: var(--success); font-weight: 600; font-size: 0.95rem;">🎉 Goal Reached!</span>
                     {% else %}
                     <button class="btn-primary" style="padding: 0.45rem 1.25rem; font-size: 0.85rem;"
-                        onclick="openAddFundsModal({{ goal.id }}, {{ goal.name|tojson }})">+ Add Funds</button>
+                        onclick="openAddFundsModal({{ goal.id }}, {{ goal.name|tojson|forceescape }})">+ Add Funds</button>
                     {% endif %}
                 </div>
 

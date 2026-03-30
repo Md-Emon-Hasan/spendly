@@ -189,7 +189,7 @@
                                 <td class="text-right amount-out">- ৳{{ "%.2f"|format(e.amount) }}</td>
                                 <td class="text-right actions-cell">
                                     <button class="action-btn edit-btn"
-                                        onclick="openExpenseModal({{ e.id }}, '{{ e.date|format_date }}', {{ e.category_id|default('null') }}, {{ e.amount|default(0) }}, {{ e.description|tojson }})">✏ Edit</button>
+                                        onclick="openExpenseModal({{ e.id }}, '{{ e.date|format_date }}', {{ e.category_id|default('null') }}, {{ e.amount|default(0) }}, {{ e.description|tojson|forceescape }})">✏ Edit</button>
                                     <button class="action-btn delete-btn"
                                         data-url="{{ url_for('transactions.delete_expense', id=e.id) }}"
                                         data-msg="Delete ৳{{ '%.2f'|format(e.amount) }} ({{ e.category_name }})?"
@@ -227,7 +227,7 @@
                                 <td class="text-right amount-in">+ ৳{{ "%.2f"|format(i.amount) }}</td>
                                 <td class="text-right actions-cell">
                                     <button class="action-btn edit-btn"
-                                        onclick="openIncomeModal({{ i.id }}, '{{ i.date|format_date }}', {{ i.amount|default(0) }}, {{ i.description|tojson }})">✏ Edit</button>
+                                        onclick="openIncomeModal({{ i.id }}, '{{ i.date|format_date }}', {{ i.amount|default(0) }}, {{ i.description|tojson|forceescape }})">✏ Edit</button>
                                     <button class="action-btn delete-btn"
                                         data-url="{{ url_for('transactions.delete_income', id=i.id) }}"
                                         data-msg="Delete ৳{{ '%.2f'|format(i.amount) }} income?"
