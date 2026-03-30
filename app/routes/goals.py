@@ -36,17 +36,24 @@ def index():
 
     curr_month = datetime.now().strftime("%Y-%m")
 
-    budget_row = conn.execute(
-        "SELECT amount FROM budgets WHERE user_id=? AND category_id IS NULL AND month=?",
-        (uid, curr_month)
-    ).fetchone()
-    monthly_budget = budget_row["amount"] if budget_row else 0
+    try:
+        budget_row = conn.execute(
+            "SELECT amount FROM budgets WHERE user_id=? AND category_id IS NULL AND month=?",
+            (uid, curr_month)
+        ).fetchone()
+        monthly_budget = float(budget_row["amount"]) if budget_row and budget_row["amount"] is not None else 0.0
+    except Exception:
+        monthly_budget = 0.0
 
-    cm_expense_row = conn.execute(
-        "SELECT COALESCE(SUM(amount), 0) as spent FROM expenses WHERE user_id=? AND strftime('%Y-%m', date)=?",
-        (uid, curr_month)
-    ).fetchone()
-    cm_expense = cm_expense_row['spent']
+    try:
+        cm_expense_row = conn.execute(
+            "SELECT COALESCE(SUM(amount), 0) as spent FROM expenses WHERE user_id=? AND strftime('%Y-%m', date)=?",
+            (uid, curr_month)
+        ).fetchone()
+        cm_expense = float(cm_expense_row['spent']) if cm_expense_row and cm_expense_row['spent'] is not None else 0.0
+    except Exception:
+        cm_expense = 0.0
+
     budget_used_percent = round(min(100, (cm_expense / monthly_budget) * 100), 1) if monthly_budget > 0 else 0
 
     return render_template('goals.html', goals=goals_data, monthly_budget=monthly_budget,

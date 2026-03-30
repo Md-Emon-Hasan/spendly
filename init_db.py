@@ -109,12 +109,20 @@ def init_db():
             );
         ''')
 
-        # 6a. Add created_at to existing goals table if missing (SQLite handles IF NOT EXISTS differently for columns, but this works for PG)
+        # 6a. Add created_at to existing goals table if missing
         try:
             if is_postgres:
                 cur.execute('ALTER TABLE goals ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;')
-        except:
-            pass
+            else:
+                # SQLite doesn't support IF NOT EXISTS in ALTER TABLE.
+                # Use a trick: check if column lives in the table info.
+                cur.execute("PRAGMA table_info(goals)")
+                columns = [c[1] for c in cur.fetchall()]
+                if 'created_at' not in columns:
+                    print("Adding 'created_at' to goals table (SQLite)...")
+                    cur.execute("ALTER TABLE goals ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+        except Exception as e:
+            print(f"Warning migrating goals table: {e}")
 
         # 7. Goal Fund History
         cur.execute(f'''
