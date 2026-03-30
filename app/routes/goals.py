@@ -77,7 +77,7 @@ def add_funds(id):
     # verify ownership
     goal = conn.execute("SELECT * FROM goals WHERE id=? AND user_id=?", (id, uid)).fetchone()
     if goal:
-        new_amt = goal['current_amount'] + amount
+        new_amt = float(goal['current_amount']) + amount
         conn.execute("UPDATE goals SET current_amount = ? WHERE id = ?", (new_amt, id))
         conn.commit()
         flash(f'Added {amount} to {goal["name"]}!', 'success')

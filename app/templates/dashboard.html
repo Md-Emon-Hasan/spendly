@@ -189,7 +189,7 @@
                                 <td class="text-right amount-out">- ৳{{ "%.2f"|format(e.amount) }}</td>
                                 <td class="text-right actions-cell">
                                     <button class="action-btn edit-btn"
-                                        onclick="openExpenseModal({{ e.id }}, '{{ e.date|format_date }}', {{ e.category_id }}, {{ e.amount }}, '{{ e.description }}')">✏️</button>
+                                        onclick="openExpenseModal({{ e.id }}, '{{ e.date|format_date }}', {{ e.category_id }}, {{ e.amount }}, {{ e.description|tojson }})">✏️</button>
                                     <form action="{{ url_for('transactions.delete_expense', id=e.id) }}" method="POST"
                                         class="inline-form"
                                         onsubmit="return confirm('Are you sure you want to delete this expense?');">
@@ -228,7 +228,7 @@
                                 <td class="text-right amount-in">+ ৳{{ "%.2f"|format(i.amount) }}</td>
                                 <td class="text-right actions-cell">
                                     <button class="action-btn edit-btn"
-                                        onclick="openIncomeModal({{ i.id }}, '{{ i.date|format_date }}', {{ i.amount }}, '{{ i.description }}')">✏️</button>
+                                        onclick="openIncomeModal({{ i.id }}, '{{ i.date|format_date }}', {{ i.amount }}, {{ i.description|tojson }})">✏️</button>
                                     <form action="{{ url_for('transactions.delete_income', id=i.id) }}" method="POST"
                                         class="inline-form"
                                         onsubmit="return confirm('Are you sure you want to delete this income?');">
@@ -345,7 +345,7 @@
         document.getElementById('edit_exp_date').value = date;
         document.getElementById('edit_exp_category_id').value = catId;
         document.getElementById('edit_exp_amount').value = amount;
-        document.getElementById('edit_exp_desc').value = desc === 'None' ? '' : desc;
+        document.getElementById('edit_exp_desc').value = (desc === null || desc === 'None') ? '' : desc;
         document.getElementById('editExpenseForm').action = "/expenses/" + id + "/edit";
         document.getElementById('editExpenseModal').style.display = "block";
     }

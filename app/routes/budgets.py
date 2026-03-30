@@ -37,6 +37,5 @@ def set_budget():
         VALUES (?, ?, ?, ?)
     ''', (session["user_id"], category_id, amount, month))
     conn.commit()
-    conn.commit()
-    
+
     return redirect(url_for("dashboard.index"))
