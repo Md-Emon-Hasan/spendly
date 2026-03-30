@@ -6,6 +6,10 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # --- Static Files Optimization (Render) ---
+    from whitenoise import WhiteNoise
+    app.wsgi_app = WhiteNoise(app.wsgi_app, root='app/static/')
+
     # --- Jinja Filters ---
     @app.template_filter('format_date')
     def format_date_filter(value):
@@ -42,6 +46,10 @@ def create_app(config_class=Config):
     @app.route("/terms")
     def terms():
         return render_template("terms.html")
+
+    @app.route("/health")
+    def health():
+        return "OK", 200
 
     app.teardown_appcontext(close_db)
 

@@ -1,30 +1,51 @@
 import os
+import sqlite3
 from dotenv import load_dotenv
-import psycopg2
 
 load_dotenv()
 
 def init_db():
     database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        print("Error: DATABASE_URL not found in environment.")
-        return
-
-    # Fix for newer SQLAlchemy/psycopg2 versions
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    is_postgres = database_url is not None
+    
+    if is_postgres:
+        try:
+            import psycopg2
+            from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+            print("Connecting to PostgreSQL...")
+            if database_url.startswith("postgres://"):
+                database_url = database_url.replace("postgres://", "postgresql://", 1)
+            conn = psycopg2.connect(database_url)
+            cur = conn.cursor()
+            param_style = '%s'
+            serial_type = 'SERIAL'
+            timestamp_type = 'TIMESTAMP'
+        except ImportError:
+            print("Error: psycopg2 not installed. Cannot connect to PostgreSQL.")
+            return
+        except Exception as e:
+            print(f"Error connecting to PostgreSQL: {e}")
+            return
+    else:
+        print("Connecting to local SQLite...")
+        # Get project root to find/create database folder
+        basedir = os.path.abspath(os.path.dirname(__file__))
+        db_path = os.path.join(basedir, 'database', 'spendly.db')
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        param_style = '?'
+        serial_type = 'INTEGER' # SQLITE uses INTEGER PRIMARY KEY for auto-inc
+        timestamp_type = 'DATETIME'
 
     try:
-        conn = psycopg2.connect(database_url)
-        cur = conn.cursor()
-
         # Create Tables
         print("Creating tables...")
         
         # 1. Users
-        cur.execute('''
+        cur.execute(f'''
             CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
+                id {serial_type} PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL
@@ -32,9 +53,9 @@ def init_db():
         ''')
 
         # 2. Categories
-        cur.execute('''
+        cur.execute(f'''
             CREATE TABLE IF NOT EXISTS categories (
-                id SERIAL PRIMARY KEY,
+                id {serial_type} PRIMARY KEY,
                 name VARCHAR(100) NOT NULL,
                 icon VARCHAR(10) DEFAULT '📦',
                 type VARCHAR(20) DEFAULT 'expense'
@@ -42,32 +63,32 @@ def init_db():
         ''')
 
         # 3. Incomes
-        cur.execute('''
+        cur.execute(f'''
             CREATE TABLE IF NOT EXISTS incomes (
-                id SERIAL PRIMARY KEY,
+                id {serial_type} PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                 amount DECIMAL(15, 2) NOT NULL,
                 description TEXT,
-                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                date {timestamp_type} DEFAULT CURRENT_TIMESTAMP
             );
         ''')
 
         # 4. Expenses
-        cur.execute('''
+        cur.execute(f'''
             CREATE TABLE IF NOT EXISTS expenses (
-                id SERIAL PRIMARY KEY,
+                id {serial_type} PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                 category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
                 amount DECIMAL(15, 2) NOT NULL,
                 description TEXT,
-                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                date {timestamp_type} DEFAULT CURRENT_TIMESTAMP
             );
         ''')
 
         # 5. Budgets (Unified monthly and category budgets)
-        cur.execute('''
+        cur.execute(f'''
             CREATE TABLE IF NOT EXISTS budgets (
-                id SERIAL PRIMARY KEY,
+                id {serial_type} PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                 category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
                 amount DECIMAL(15, 2) NOT NULL,
@@ -76,14 +97,32 @@ def init_db():
         ''')
 
         # 6. Goals
-        cur.execute('''
+        cur.execute(f'''
             CREATE TABLE IF NOT EXISTS goals (
-                id SERIAL PRIMARY KEY,
+                id {serial_type} PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                 name VARCHAR(255) NOT NULL,
                 target_amount DECIMAL(15, 2) NOT NULL,
                 current_amount DECIMAL(15, 2) DEFAULT 0,
-                deadline DATE
+                deadline DATE,
+                created_at {timestamp_type} DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
+        # 6a. Add created_at to existing goals table if missing (SQLite handles IF NOT EXISTS differently for columns, but this works for PG)
+        try:
+            if is_postgres:
+                cur.execute('ALTER TABLE goals ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;')
+        except:
+            pass
+
+        # 7. Goal Fund History
+        cur.execute(f'''
+            CREATE TABLE IF NOT EXISTS goal_funds (
+                id {serial_type} PRIMARY KEY,
+                goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
+                amount DECIMAL(15, 2) NOT NULL,
+                added_at {timestamp_type} DEFAULT CURRENT_TIMESTAMP
             );
         ''')
 
@@ -113,9 +152,11 @@ def init_db():
         ]
         
         for name, icon, cat_type in categories:
-            cur.execute("SELECT id FROM categories WHERE name = %s AND type = %s", (name, cat_type))
+            query = f"SELECT id FROM categories WHERE name = {param_style} AND type = {param_style}"
+            cur.execute(query, (name, cat_type))
             if not cur.fetchone():
-                cur.execute("INSERT INTO categories (name, icon, type) VALUES (%s, %s, %s)", (name, icon, cat_type))
+                insert_query = f"INSERT INTO categories (name, icon, type) VALUES ({param_style}, {param_style}, {param_style})"
+                cur.execute(insert_query, (name, icon, cat_type))
 
         conn.commit()
         cur.close()

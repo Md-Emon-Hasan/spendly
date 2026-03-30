@@ -22,12 +22,12 @@ class DBConnection:
             # 1. Translate '?' to '%s'
             query = query.replace('?', '%s')
             # 2. Translate strftime('%Y-%m', date) to TO_CHAR(date, 'YYYY-MM')
-            query = re.sub(r"strftime\('%Y-%m',\s*(.*?)\)", r"TO_CHAR(\1, 'YYYY-MM')", query)
-            # 3. Translate strftime('%w', date) to TO_CHAR(date, 'D') 
-            # (Note: Postgres 'D' is 1-7, SQLite '%w' is 0-6). 
-            # We'll adjust in the application logic if needed, but for now simple translation.
-            query = re.sub(r"strftime\('%w',\s*(.*?)\)", r"(EXTRACT(DOW FROM \1)::int)", query)
-            # 4. Handle other common strftime uses if necessary
+            # Robust regex to handle variations in quotes and spacing
+            query = re.sub(r"strftime\s*\(\s*['\"]%Y-%m['\"]\s*,\s*(.*?)\)", r"TO_CHAR(\1, 'YYYY-MM')", query)
+            # 3. Translate strftime('%w', date) to EXTRACT(DOW FROM date)
+            query = re.sub(r"strftime\s*\(\s*['\"]%w['\"]\s*,\s*(.*?)\)", r"(EXTRACT(DOW FROM \1)::int)", query)
+            # 4. Handle simple date retrieval if used
+            query = re.sub(r"strftime\s*\(\s*['\"]%Y-%m-%d['\"]\s*,\s*(.*?)\)", r"(\1)::date::text", query)
             
             cursor = self.connection.cursor(cursor_factory=RealDictCursor)
         else:
