@@ -131,7 +131,7 @@ def index():
         SELECT c.name, c.icon, COALESCE(SUM(e.amount),0) as total
         FROM categories c LEFT JOIN expenses e ON c.id = e.category_id
             AND e.user_id = ? AND strftime('%Y-%m', e.date) = ?
-        GROUP BY c.id HAVING total > 0
+        GROUP BY c.id, c.name, c.icon HAVING COALESCE(SUM(e.amount),0) > 0
         ORDER BY total DESC
     """, (uid, curr_month)).fetchall()
 
