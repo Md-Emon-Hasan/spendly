@@ -111,12 +111,9 @@ def add_funds(id):
     conn = get_db()
     goal = conn.execute("SELECT * FROM goals WHERE id=? AND user_id=?", (id, uid)).fetchone()
     if goal:
-        new_amt = float(goal['current_amount']) + amount
+        new_amt = float(goal['current_amount'] or 0) + amount
         conn.execute("UPDATE goals SET current_amount = ? WHERE id = ?", (new_amt, id))
-        try:
-            conn.execute("INSERT INTO goal_funds (goal_id, amount) VALUES (?, ?)", (id, amount))
-        except Exception:
-            pass
+        conn.execute("INSERT INTO goal_funds (goal_id, amount) VALUES (?, ?)", (id, amount))
         conn.commit()
         flash(f'Added ৳{amount:.2f} to {goal["name"]}!', 'success')
     return redirect(url_for('goals.index'))

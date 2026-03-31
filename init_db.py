@@ -16,6 +16,7 @@ def init_db():
             if database_url.startswith("postgres://"):
                 database_url = database_url.replace("postgres://", "postgresql://", 1)
             conn = psycopg2.connect(database_url)
+            conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = conn.cursor()
             param_style = '%s'
             serial_type = 'SERIAL'
