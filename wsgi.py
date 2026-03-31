@@ -7,6 +7,10 @@ if path not in sys.path:
     sys.path.insert(0, path)
 
 from app import create_app
+import init_db
+
+# Ensure all database migrations/tables exist
+init_db.init_db()
 
 # PythonAnywhere/Render look for a variable called 'application'
 application = create_app()
