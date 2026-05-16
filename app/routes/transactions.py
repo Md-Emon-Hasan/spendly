@@ -22,6 +22,7 @@ def cash_in():
         (session["user_id"], amount, description, txn_datetime),
     )
     conn.commit()
+    flash(f"Income of ৳{amount:.2f} added successfully!", "success")
     return redirect(url_for("dashboard.index"))
 
 
@@ -43,6 +44,7 @@ def edit_income(id):
         (amount, description, txn_datetime, id, session["user_id"])
     )
     conn.commit()
+    flash("Income updated.", "success")
     return redirect(url_for("dashboard.index"))
 
 
@@ -54,6 +56,7 @@ def delete_income(id):
     conn = get_db()
     conn.execute("DELETE FROM incomes WHERE id=? AND user_id=?", (id, session["user_id"]))
     conn.commit()
+    flash("Income deleted.", "info")
     return redirect(url_for("dashboard.index"))
 
 
@@ -76,6 +79,7 @@ def add_expense():
         (session["user_id"], category_id, amount, description, txn_datetime),
     )
     conn.commit()
+    flash(f"Expense of ৳{amount:.2f} recorded!", "success")
     return redirect(url_for("dashboard.index"))
 
 
@@ -97,6 +101,7 @@ def edit_expense(id):
         (category_id, amount, description, txn_datetime, id, session["user_id"])
     )
     conn.commit()
+    flash("Expense updated.", "success")
     return redirect(url_for("dashboard.index"))
 
 
@@ -108,6 +113,7 @@ def delete_expense(id):
     conn = get_db()
     conn.execute("DELETE FROM expenses WHERE id=? AND user_id=?", (id, session["user_id"]))
     conn.commit()
+    flash("Expense deleted.", "info")
     return redirect(url_for("dashboard.index"))
 
 # --- History / All Transactions Route ---

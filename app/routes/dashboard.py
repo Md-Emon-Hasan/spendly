@@ -135,6 +135,24 @@ def index():
         ORDER BY total DESC
     """, (uid, curr_month)).fetchall()
 
+    # --- Financial Health Score (0-100) ---
+    score = 50
+    if cm_income > 0:
+        savings_rate = (cm_income - cm_expense) / cm_income
+        score += min(35, max(-35, int(savings_rate * 70)))
+    elif cm_expense > 0:
+        score -= 15
+    if monthly_budget > 0:
+        if budget_used_percent <= 70:
+            score += 15
+        elif budget_used_percent <= 90:
+            score += 7
+        elif budget_used_percent >= 100:
+            score -= 10
+    if lifetime_saved > 0:
+        score += 5
+    health_score = max(0, min(100, score))
+
     return render_template(
         "dashboard.html",
         total_income=total_income,
@@ -160,4 +178,5 @@ def index():
         safe_to_spend_daily=safe_to_spend_daily,
         budget_used_percent=budget_used_percent,
         detailed_cat_budgets=detailed_cat_budgets,
+        health_score=health_score,
     )
