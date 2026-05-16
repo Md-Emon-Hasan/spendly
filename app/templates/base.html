@@ -1,71 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Spendly{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <!-- Add global animation styles here to bypass cache completely without modifying CSS files -->
-    <style>
-        @keyframes fillProgress {
-            from { transform: scaleX(0); }
-            to { transform: scaleX(1); }
-        }
-        .progress-fill, .cat-fill {
-            transform-origin: left center !important;
-            animation: fillProgress 1.2s cubic-bezier(0.1, 0.9, 0.2, 1) forwards !important;
-        }
-    </style>
-    {% block head %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Spendly{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
 </head>
-
 <body>
 
-    <nav class="navbar">
-        <div class="nav-inner">
-            <a href="{{ url_for('landing') }}" class="nav-brand">
-                <span class="brand-icon">◈</span>
-                <span class="brand-name">Spendly</span>
-            </a>
-            <div class="nav-links">
-                {% if session.get('user_id') %}
-                <div class="nav-links">
-                    <a href="{{ url_for('dashboard.index') }}" class="nav-link">Dashboard</a>
-                    <a href="{{ url_for('transactions.history') }}" class="nav-link">History</a>
-                    <a href="{{ url_for('goals.index') }}" class="nav-link">Goals</a>
-                    <a href="{{ url_for('analytics.index') }}" class="nav-link">Analytics</a>
-                    <a href="{{ url_for('auth.logout') }}" class="nav-link btn-ghost"
-                        style="padding: 0.4rem 1rem;">Logout</a>
-                </div>{% else %}
-                <a href="{{ url_for('auth.login') }}">Sign in</a>
-                <a href="{{ url_for('auth.register') }}" class="nav-cta">Get started</a>
-                {% endif %}
-            </div>
-        </div>
+{% if session.get('user_id') %}
+
+<header class="mobile-topbar">
+  <a href="{{ url_for('landing') }}" class="mobile-brand">
+    <span class="icon">◈</span> Spendly
+  </a>
+  <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/>
+    </svg>
+  </button>
+</header>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">◈</div>
+      <div>
+        <div class="sb-brand-name">Spendly</div>
+      </div>
+      <span class="sb-brand-badge" style="margin-left:auto">Pro</span>
+    </div>
+
+    <nav class="sb-nav">
+      <a href="{{ url_for('dashboard.index') }}"
+         class="sb-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+        <span class="sb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/>
+            <rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/>
+          </svg>
+        </span>
+        Dashboard
+      </a>
+      <a href="{{ url_for('transactions.history') }}"
+         class="sb-item {% if request.endpoint == 'transactions.history' %}active{% endif %}">
+        <span class="sb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+            <line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="10" y2="12"/>
+          </svg>
+        </span>
+        History
+      </a>
+      <a href="{{ url_for('goals.index') }}"
+         class="sb-item {% if request.endpoint == 'goals.index' %}active{% endif %}">
+        <span class="sb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+            <circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.5"/>
+            <line x1="8" y1="1" x2="8" y2="3.5"/><line x1="8" y1="12.5" x2="8" y2="15"/>
+          </svg>
+        </span>
+        Goals
+      </a>
+      <a href="{{ url_for('analytics.index') }}"
+         class="sb-item {% if request.endpoint == 'analytics.index' %}active{% endif %}">
+        <span class="sb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="2,12 6,7 9,10 14,4"/>
+            <polyline points="11,4 14,4 14,7"/>
+          </svg>
+        </span>
+        Analytics
+      </a>
+
+      <div class="sb-divider"></div>
+
+      <a href="{{ url_for('export.export_transactions') }}" class="sb-item">
+        <span class="sb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 8l4 4 4-4"/><line x1="8" y1="2" x2="8" y2="12"/><path d="M2 14h12"/>
+          </svg>
+        </span>
+        Export CSV
+      </a>
     </nav>
 
-    <main class="main-content">
-        {% block content %}{% endblock %}
-    </main>
-
-    <footer class="footer">
-        <div class="footer-inner">
-            <span class="brand-icon">◈</span>
-            <span class="footer-name">Spendly</span>
-            <p class="footer-copy">Track every taka. Own your finances.</p>
-            <p><a href="/terms">Terms and Conditions</a></p>
-            <p><a href="#">Privacy Policy</a></p>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-user-avatar">{{ session.username[0]|upper }}</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name">{{ session.username }}</div>
+          <div class="sb-user-role">Personal</div>
         </div>
-    </footer>
+      </div>
+      <a href="{{ url_for('auth.logout') }}" class="sb-item" style="opacity:0.6;margin-top:2px">
+        <span class="sb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 2h3a1 1 0 011 1v10a1 1 0 01-1 1h-3"/><polyline points="7,11 10,8 7,5"/><line x1="10" y1="8" x2="2" y2="8"/>
+          </svg>
+        </span>
+        Sign out
+      </a>
+    </div>
+  </aside>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {% block scripts %}{% endblock %}
+  <div class="page-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div id="flash-data" style="display:none">
+      {% for cat, msg in messages %}<span data-cat="{{ cat }}">{{ msg }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    <div class="page-body">
+
+{% else %}
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="{{ url_for('landing') }}" class="nav-brand">
+      <span class="brand-icon">◈</span>
+      <span>Spendly</span>
+    </a>
+    <div class="nav-links">
+      <a href="{{ url_for('auth.login') }}">Sign in</a>
+      <a href="{{ url_for('auth.register') }}" class="nav-cta">Get started free</a>
+    </div>
+  </div>
+</nav>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div id="flash-data" style="display:none">
+  {% for cat, msg in messages %}<span data-cat="{{ cat }}">{{ msg }}</span>{% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<main class="main-content">
+{% endif %}
+
+{% block content %}{% endblock %}
+
+{% if session.get('user_id') %}
+    </div>{# .page-body #}
+  </div>{# .page-content #}
+</div>{# .app-shell #}
+{% else %}
+</main>
+<footer class="footer">
+  <div class="footer-inner">
+    <span class="brand-icon">◈</span>
+    <span class="footer-name">Spendly</span>
+    <p class="footer-copy">Track every taka. Own your finances.</p>
+    <p><a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="#">Privacy</a></p>
+  </div>
+</footer>
+{% endif %}
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
 </body>
-
 </html>

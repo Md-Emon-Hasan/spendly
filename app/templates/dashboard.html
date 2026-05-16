@@ -1,416 +1,487 @@
 {% extends "base.html" %}
-
 {% block title %}Dashboard — Spendly{% endblock %}
 
 {% block content %}
-<div class="dash-wrapper">
-    <div class="dash-container">
-        <!-- Header -->
-        <header class="dash-header">
-            <div class="header-left">
-                <p class="greeting">Welcome back, <strong>{{ session.username }}</strong>!</p>
-                <h1 class="dash-title">Overview</h1>
-            </div>
-            <div class="header-right">
-                <a href="{{ url_for('analytics.index') }}" class="btn-ghost">View Analytics</a>
-            </div>
-        </header>
 
-        <!-- Budget Section -->
-        {% if monthly_budget > 0 %}
-        <div class="budget-section"
-            style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border);">
-            <div
-                style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.25rem;">
-                <span style="font-weight: 500;">Monthly Budget Usage</span>
-                <span style="color: var(--text-secondary);">৳{{ "%.2f"|format(cm_expense) }} / ৳{{
-                    "%.2f"|format(monthly_budget) }}</span>
-            </div>
-            <div class="progress-bar-bg"
-                style="width: 100%; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden;">
-                <div class="progress-fill"
-                    style="width: {{ budget_used_percent }}%; height: 100%; background: {% if budget_used_percent > 90 %}var(--danger){% elif budget_used_percent > 75 %}var(--warning){% else %}var(--primary){% endif %}; transition: width 0.8s ease-out;">
-                </div>
-            </div>
-            <div
-                style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-secondary); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-                <span>Safe to Spend: <strong>৳{{ "%.2f"|format(safe_to_spend_daily) }} / day</strong></span>
-                <a href="#" onclick="document.getElementById('setBudgetModal').style.display='block'"
-                    style="color: var(--primary);">Update Budget</a>
-            </div>
-        </div>
-        {% else %}
-        <div class="budget-section"
-            style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); text-align: center;">
-            <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">No monthly budget set.</p>
-            <button class="btn-ghost" onclick="document.getElementById('setBudgetModal').style.display='block'">Set
-                Monthly Budget</button>
-        </div>
-        {% endif %}
-
-        <!-- Category Budgets -->
-        {% if detailed_cat_budgets %}
-        <div style="margin-bottom: 2rem; display: flex; flex-direction: column; gap: 1rem;">
-            {% for cb in detailed_cat_budgets %}
-            <div
-                style="background: var(--surface); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border);">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
-                    <span><span class="cat-pill" style="margin-right:0.5rem; padding: 0.1rem 0.5rem">{{ cb.icon
-                            }}</span> <span style="font-weight: 500;">{{ cb.name }} Budget</span></span>
-                    <span style="color: var(--text-secondary);">৳{{ "%.2f"|format(cb.spent) }} / ৳{{
-                        "%.2f"|format(cb.budget) }}</span>
-                </div>
-                <div class="progress-bar-bg"
-                    style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
-                    <div class="progress-fill"
-                        style="width: {{ cb.percent }}%; height: 100%; background: {% if cb.percent > 90 %}var(--danger){% elif cb.percent > 75 %}var(--warning){% else %}var(--primary){% endif %}; transition: width 0.8s ease-out;">
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <!-- Stats Row -->
-        <div class="stats-grid">
-            <div class="stat-card stat-primary">
-                <p class="stat-label">Remaining Balance</p>
-                <h2 class="stat-value">৳ {{ "%.2f"|format(balance|default(0)) }}</h2>
-            </div>
-
-            <div class="stat-card">
-                <p class="stat-label">This Month's Spending</p>
-                <h2 class="stat-value">৳ {{ "%.2f"|format(cm_expense|default(0)) }}</h2>
-                {% if savings_diff and savings_diff > 0 %}
-                <p class="stat-trend trend-up">↑ ৳{{ "%.0f"|format(savings_diff) }} saved compared to last month</p>
-                {% elif savings_diff and savings_diff < 0 %} <p class="stat-trend trend-down">↓ ৳{{
-                    "%.0f"|format(savings_diff|abs) }} less saved than last month</p>
-                    {% else %}
-                    <p class="stat-trend">Same as last month</p>
-                    {% endif %}
-            </div>
-
-            <div class="stat-card">
-                <p class="stat-label">Daily Average Spend</p>
-                <h2 class="stat-value">৳ {{ "%.2f"|format(daily_average|default(0)) }}</h2>
-                <p class="stat-trend text-secondary">Projected Month: ৳{{ "%.0f"|format(projected_spend) }}</p>
-            </div>
-
-            <div class="stat-card">
-                <p class="stat-label">Total Cash-In</p>
-                <h2 class="stat-value">৳ {{ "%.2f"|format(total_income|default(0)) }}</h2>
-            </div>
-        </div>
-
-        <!-- Forms Row -->
-        <div class="forms-grid">
-            <!-- Add Expense -->
-            <div class="form-card">
-                <h3 class="card-title">Add Expense</h3>
-                <form action="{{ url_for('transactions.add_expense') }}" method="POST" class="dash-form">
-                    <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" name="date" class="form-input" required value="{{ current_date }}">
-                    </div>
-                    <div class="form-group">
-                        <label>Category</label>
-                        <select name="category_id" class="form-input" required>
-                            <option value="">Select Category</option>
-                            {% for c in categories %}
-                            <option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Amount (৳)</label>
-                        <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 150"
-                            required>
-                    </div>
-                    <div class="form-group">
-                        <label>Short Note</label>
-                        <input type="text" name="description" class="form-input" placeholder="e.g. Lunch, Wifi Bill"
-                            autocomplete="off">
-                    </div>
-                    <button type="submit" class="btn-primary w-full">Record Expense</button>
-                </form>
-            </div>
-
-            <!-- Cash In -->
-            <div class="form-card">
-                <h3 class="card-title">Cash In / Add Income</h3>
-                <form action="{{ url_for('transactions.cash_in') }}" method="POST" class="dash-form">
-                    <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" name="date" class="form-input" required value="{{ current_date }}">
-                    </div>
-                    <div class="form-group">
-                        <label>Amount (৳)</label>
-                        <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 5000"
-                            required>
-                    </div>
-                    <div class="form-group">
-                        <label>Source</label>
-                        <select name="description" class="form-input" required>
-                            <option value="">Select Source</option>
-                            <option value="From Home/Family">From Home/Family</option>
-                            <option value="Salary/Wages">Salary/Wages</option>
-                            <option value="Freelancing/Part-time">Freelancing/Part-time</option>
-                            <option value="Borrow/Loan">Borrow/Loan</option>
-                            <option value="Others">Others</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn-success w-full" style="margin-top: auto;">Add Cash</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Tables Row -->
-        <div class="tables-grid">
-            <!-- Recent Expenses -->
-            <div class="table-card">
-                <h3 class="card-title">Recent Expenses</h3>
-                <div class="table-responsive">
-                    <table class="dash-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Category</th>
-                                <th>Note</th>
-                                <th class="text-right">Amount</th>
-                                <th class="text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for e in recent_expenses %}
-                            <tr>
-                                <td>{{ e.date|format_date }}</td>
-                                <td><span class="cat-pill">{{ e.category_icon }} {{ e.category_name }}</span></td>
-                                <td>{{ e.description or '-' }}</td>
-                                <td class="text-right amount-out">- ৳{{ "%.2f"|format(e.amount) }}</td>
-                                <td class="text-right actions-cell">
-                                    <button class="action-btn edit-btn"
-                                        data-id="{{ e.id }}"
-                                        data-date="{{ e.date|format_date }}"
-                                        data-catid="{{ e.category_id|default('') }}"
-                                        data-amount="{{ e.amount }}"
-                                        data-desc="{{ e.description or '' }}"
-                                        onclick="openExpenseModal(this)">✏ Edit</button>
-                                    <button class="action-btn delete-btn"
-                                        data-url="{{ url_for('transactions.delete_expense', id=e.id) }}"
-                                        data-msg="Delete ৳{{ '%.2f'|format(e.amount) }} ({{ e.category_name }})?"
-                                        onclick="openDeleteModal(this)">✕ Delete</button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="5" class="text-center empty-state">No recent expenses.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Recent Incomes -->
-            <div class="table-card">
-                <h3 class="card-title">Recent Cash-In</h3>
-                <div class="table-responsive">
-                    <table class="dash-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Source</th>
-                                <th class="text-right">Amount</th>
-                                <th class="text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for i in recent_incomes %}
-                            <tr>
-                                <td>{{ i.date|format_date }}</td>
-                                <td>{{ i.description }}</td>
-                                <td class="text-right amount-in">+ ৳{{ "%.2f"|format(i.amount) }}</td>
-                                <td class="text-right actions-cell">
-                                    <button class="action-btn edit-btn"
-                                        data-id="{{ i.id }}"
-                                        data-date="{{ i.date|format_date }}"
-                                        data-amount="{{ i.amount }}"
-                                        data-desc="{{ i.description or '' }}"
-                                        onclick="openIncomeModal(this)">✏ Edit</button>
-                                    <button class="action-btn delete-btn"
-                                        data-url="{{ url_for('transactions.delete_income', id=i.id) }}"
-                                        data-msg="Delete ৳{{ '%.2f'|format(i.amount) }} income?"
-                                        onclick="openDeleteModal(this)">✕ Delete</button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center empty-state">No recent income.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-    </div>
+{# ── PAGE HEADER ── #}
+<div class="page-header">
+  <div class="page-header-left">
+    <p class="page-eyebrow">{{ curr_month_label }}</p>
+    <h1 class="page-title">Good day, {{ session.username }} 👋</h1>
+  </div>
+  <div class="page-header-right">
+    <button class="btn btn-ghost btn-sm" onclick="openModal('setBudgetModal')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="6"/><line x1="7" y1="4" x2="7" y2="10"/><line x1="4" y1="7" x2="10" y2="7"/></svg>
+      Set Budget
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="openModal('addIncomeModal')" title="Ctrl+I">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/></svg>
+      Income
+    </button>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addExpenseModal')" title="Ctrl+E">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/></svg>
+      Add Expense
+    </button>
+  </div>
 </div>
 
-<!-- Set Budget Modal -->
+{# ── FINANCIAL HEALTH SCORE ── #}
+{% set score = health_score %}
+{% if score >= 75 %}{% set grade = 'excellent' %}{% set grade_label = 'Excellent' %}
+{% elif score >= 55 %}{% set grade = 'good' %}{% set grade_label = 'Good' %}
+{% elif score >= 35 %}{% set grade = 'fair' %}{% set grade_label = 'Fair' %}
+{% else %}{% set grade = 'poor' %}{% set grade_label = 'Needs Attention' %}{% endif %}
+
+<div class="health-score-card">
+  <div>
+    <p class="health-score-label">Financial Health Score</p>
+    <p class="health-score-value {{ grade }}">
+      {{ score }}
+      <span style="font-size:1rem;font-weight:600;opacity:0.4">/100</span>
+      <span class="health-tag {{ grade }}">{{ grade_label }}</span>
+    </p>
+    {% if cm_income > 0 %}
+    <p class="health-score-desc">Savings rate: <strong style="color:var(--ink)">{{ "%.0f"|format(((cm_income - cm_expense) / cm_income * 100)|abs) }}%</strong> this month</p>
+    {% else %}
+    <p class="health-score-desc">Add income to see your savings rate</p>
+    {% endif %}
+  </div>
+  <div class="health-score-bar-wrap">
+    <div style="display:flex;justify-content:space-between;font-size:0.7rem;font-weight:600;color:var(--ink-3);margin-bottom:0.375rem">
+      <span>Poor</span><span style="color:var(--accent)">{{ score }}/100</span><span>Excellent</span>
+    </div>
+    <div class="health-score-bar">
+      <div class="health-score-fill {{ grade }}" style="width:{{ score }}%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:0.375rem">
+      <span style="font-size:0.7rem;color:var(--danger)">0</span>
+      <span style="font-size:0.7rem;color:var(--warning)">50</span>
+      <span style="font-size:0.7rem;color:var(--success)">100</span>
+    </div>
+  </div>
+</div>
+
+{# ── STATS ── #}
+<div class="stats-grid">
+  <div class="stat-card s-dark">
+    <span class="stat-bg-icon">💰</span>
+    <p class="stat-label">Total Balance</p>
+    <h2 class="stat-value">৳{{ "%.0f"|format(balance|default(0)) }}</h2>
+    <p class="stat-trend">Lifetime net savings</p>
+  </div>
+  <div class="stat-card s-success">
+    <span class="stat-bg-icon">📈</span>
+    <p class="stat-label">Income This Month</p>
+    <h2 class="stat-value">৳{{ "%.0f"|format(cm_income|default(0)) }}</h2>
+    <p class="stat-trend">Total received</p>
+  </div>
+  <div class="stat-card s-danger">
+    <span class="stat-bg-icon">📉</span>
+    <p class="stat-label">Spent This Month</p>
+    <h2 class="stat-value">৳{{ "%.0f"|format(cm_expense|default(0)) }}</h2>
+    {% if savings_diff and savings_diff > 0 %}
+    <p class="stat-trend">↑ ৳{{ "%.0f"|format(savings_diff) }} better than last month</p>
+    {% elif savings_diff and savings_diff < 0 %}
+    <p class="stat-trend">↓ ৳{{ "%.0f"|format(savings_diff|abs) }} more than last month</p>
+    {% else %}<p class="stat-trend">Same as last month</p>{% endif %}
+  </div>
+  <div class="stat-card s-accent">
+    <span class="stat-bg-icon">🏦</span>
+    <p class="stat-label">Saved This Month</p>
+    <h2 class="stat-value">৳{{ "%.0f"|format(cm_saved|default(0)) }}</h2>
+    <p class="stat-trend">Daily avg: ৳{{ "%.0f"|format(daily_average|default(0)) }}</p>
+  </div>
+</div>
+
+{# ── BUDGET ── #}
+{% if monthly_budget > 0 %}
+<div class="budget-section">
+  <div class="budget-header">
+    <div style="display:flex;align-items:center;gap:0.625rem">
+      <span class="budget-title">Monthly Budget</span>
+      {% if budget_used_percent >= 100 %}
+      <span class="budget-status-tag bst-over">⚡ Over budget</span>
+      {% elif budget_used_percent >= 80 %}
+      <span class="budget-status-tag bst-warn">⚠ Near limit</span>
+      {% else %}
+      <span class="budget-status-tag bst-safe">✓ On track</span>
+      {% endif %}
+    </div>
+    <span class="budget-amounts">৳{{ "%.0f"|format(cm_expense) }} / ৳{{ "%.0f"|format(monthly_budget) }}</span>
+  </div>
+  <div class="progress-bar-bg">
+    <div class="progress-fill {% if budget_used_percent > 90 %}p-danger{% elif budget_used_percent > 75 %}p-warning{% else %}p-success{% endif %}"
+         style="width:{{ [budget_used_percent, 100]|min }}%"></div>
+  </div>
+  <div class="budget-meta">
+    <span>Safe daily spend: <strong style="color:var(--ink)">৳{{ "%.0f"|format(safe_to_spend_daily) }}/day</strong>
+      &nbsp;·&nbsp; <strong style="color:var(--ink)">{{ "%.1f"|format(budget_used_percent) }}%</strong> used
+      &nbsp;·&nbsp; Projected: ৳{{ "%.0f"|format(projected_spend) }}
+    </span>
+    <a href="#" onclick="openModal('setBudgetModal');return false">Update →</a>
+  </div>
+</div>
+{% else %}
+<div class="budget-section" style="text-align:center;padding:1.25rem 1.5rem">
+  <p style="color:var(--ink-3);font-size:0.875rem;margin-bottom:0.75rem;font-weight:500">No monthly budget set. Set one to start tracking your limits.</p>
+  <button class="btn btn-ghost btn-sm" onclick="openModal('setBudgetModal')">+ Set Monthly Budget</button>
+</div>
+{% endif %}
+
+{# ── CATEGORY BUDGETS ── #}
+{% if detailed_cat_budgets %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:0.75rem;margin-bottom:1.5rem">
+  {% for cb in detailed_cat_budgets %}
+  <div class="cat-budget-item">
+    <div class="cat-budget-header">
+      <span style="display:flex;align-items:center;gap:0.5rem;font-weight:600">
+        <span>{{ cb.icon }}</span><span>{{ cb.name }}</span>
+      </span>
+      <span class="budget-amounts">{{ "%.0f"|format(cb.percent) }}%</span>
+    </div>
+    <div class="progress-bar-bg" style="height:5px">
+      <div class="progress-fill {% if cb.percent > 90 %}p-danger{% elif cb.percent > 75 %}p-warning{% else %}p-accent{% endif %}"
+           style="width:{{ [cb.percent, 100]|min }}%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--ink-3);margin-top:0.375rem">
+      <span>৳{{ "%.0f"|format(cb.spent) }} spent</span>
+      <span>of ৳{{ "%.0f"|format(cb.budget) }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── SPENDING INSIGHT ── #}
+{% if cm_income > 0 and cm_expense > cm_income %}
+<div class="insight-box warn" style="margin-bottom:1.5rem">
+  <span class="insight-icon">⚠</span>
+  <span>Spending <strong>৳{{ "%.0f"|format(cm_expense - cm_income) }}</strong> more than income this month. Review your expenses.</span>
+</div>
+{% elif daily_average > 0 and projected_spend > monthly_budget and monthly_budget > 0 %}
+<div class="insight-box" style="margin-bottom:1.5rem">
+  <span class="insight-icon">💡</span>
+  <span>At this pace you'll spend <strong>৳{{ "%.0f"|format(projected_spend) }}</strong> this month — <strong>৳{{ "%.0f"|format(projected_spend - monthly_budget) }}</strong> over budget.</span>
+</div>
+{% endif %}
+
+{# ── RECENT TRANSACTIONS ── #}
+<div class="tables-grid">
+  <div class="table-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding-bottom:0.875rem;border-bottom:1px solid var(--border)">
+      <h3 style="font-size:0.9375rem;font-weight:700;color:var(--ink)">Recent Expenses</h3>
+      <a href="{{ url_for('transactions.history') }}?type=expense" class="btn btn-ghost btn-sm">View all →</a>
+    </div>
+    <div class="table-responsive">
+      <table class="dash-table">
+        <thead><tr>
+          <th>Date</th><th>Category</th><th>Note</th>
+          <th class="text-right">Amount</th><th class="text-right">Actions</th>
+        </tr></thead>
+        <tbody>
+          {% for e in recent_expenses %}
+          <tr>
+            <td style="color:var(--ink-3);font-size:0.8rem;font-weight:500">{{ e.date|format_date }}</td>
+            <td><span class="cat-pill">{{ e.category_icon }} {{ e.category_name }}</span></td>
+            <td style="color:var(--ink-3);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.description or '—' }}</td>
+            <td class="text-right amount-out">− ৳{{ "%.2f"|format(e.amount) }}</td>
+            <td class="text-right actions-cell">
+              <button class="action-btn edit-btn" data-id="{{ e.id }}" data-date="{{ e.date|format_date }}"
+                data-catid="{{ e.category_id|default('') }}" data-amount="{{ e.amount }}" data-desc="{{ e.description or '' }}"
+                onclick="openExpenseModal(this)">✏</button>
+              <button class="action-btn delete-btn"
+                data-url="{{ url_for('transactions.delete_expense', id=e.id) }}"
+                data-msg="Delete ৳{{ '%.2f'|format(e.amount) }} ({{ e.category_name }})?"
+                onclick="openDeleteModal(this)">✕</button>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center empty-state">No expenses yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding-bottom:0.875rem;border-bottom:1px solid var(--border)">
+      <h3 style="font-size:0.9375rem;font-weight:700;color:var(--ink)">Recent Income</h3>
+      <a href="{{ url_for('transactions.history') }}?type=income" class="btn btn-ghost btn-sm">View all →</a>
+    </div>
+    <div class="table-responsive">
+      <table class="dash-table">
+        <thead><tr>
+          <th>Date</th><th>Source</th>
+          <th class="text-right">Amount</th><th class="text-right">Actions</th>
+        </tr></thead>
+        <tbody>
+          {% for i in recent_incomes %}
+          <tr>
+            <td style="color:var(--ink-3);font-size:0.8rem;font-weight:500">{{ i.date|format_date }}</td>
+            <td style="font-weight:500">{{ i.description }}</td>
+            <td class="text-right amount-in">+ ৳{{ "%.2f"|format(i.amount) }}</td>
+            <td class="text-right actions-cell">
+              <button class="action-btn edit-btn" data-id="{{ i.id }}" data-date="{{ i.date|format_date }}"
+                data-amount="{{ i.amount }}" data-desc="{{ i.description or '' }}"
+                onclick="openIncomeModal(this)">✏</button>
+              <button class="action-btn delete-btn"
+                data-url="{{ url_for('transactions.delete_income', id=i.id) }}"
+                data-msg="Delete ৳{{ '%.2f'|format(i.amount) }} income?"
+                onclick="openDeleteModal(this)">✕</button>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center empty-state">No income yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ── CATEGORY SPENDING ── #}
+{% if cat_spending %}
+<div class="card card-pad" style="margin-top:1.25rem">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:0.875rem;border-bottom:1px solid var(--border)">
+    <h3 style="font-size:0.9375rem;font-weight:700;color:var(--ink)">Category Spending — {{ curr_month_label }}</h3>
+    <a href="{{ url_for('analytics.index') }}" class="btn btn-ghost btn-sm">Full Analytics →</a>
+  </div>
+  {% set max_cat = cat_spending[0].total %}
+  <div class="cat-bars-container">
+    {% for c in cat_spending %}
+    <div class="cat-bar-row">
+      <div class="cat-info"><span>{{ c.icon }}</span><span>{{ c.name }}</span></div>
+      <div class="cat-track">
+        <div class="cat-fill"
+          style="width:{{ (c.total / max_cat * 100)|round }}%;
+          background:{% if loop.index == 1 %}var(--grad-accent){% elif loop.index == 2 %}var(--grad-emerald){% elif loop.index == 3 %}var(--grad-blue){% else %}linear-gradient(90deg,#7c3aed,#8b5cf6){% endif %}">
+        </div>
+      </div>
+      <div class="cat-amount">৳{{ "%.0f"|format(c.total) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ── FAB ── #}
+<button class="fab" onclick="openModal('addExpenseModal')" title="Quick add expense (Ctrl+E)">
+  <div class="fab-tooltip">Add Expense</div>
+  +
+</button>
+
+{# ================================================================ #}
+{# MODALS                                                           #}
+{# ================================================================ #}
+
+{# Add Expense #}
+<div id="addExpenseModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-header-title">Add Expense</span>
+      <button class="close-btn" onclick="closeModal('addExpenseModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form action="{{ url_for('transactions.add_expense') }}" method="POST" class="dash-form" id="addExpenseForm">
+        <div class="form-group"><label>Date</label>
+          <input type="date" name="date" class="form-input" required value="{{ current_date }}"></div>
+        <div class="form-group"><label>Category</label>
+          <select name="category_id" class="form-input" required>
+            <option value="">Select category</option>
+            {% for c in categories %}<option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>{% endfor %}
+          </select></div>
+        <div class="form-group"><label>Amount (৳)</label>
+          <input type="number" step="0.01" name="amount" class="form-input" placeholder="0.00" required min="0.01"></div>
+        <div class="form-group" style="margin-bottom:0"><label>Note <span style="color:var(--ink-4);font-weight:400">(optional)</span></label>
+          <input type="text" name="description" class="form-input" placeholder="e.g. Lunch, Wifi bill" autocomplete="off"></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <div style="display:flex;gap:0.75rem">
+        <button type="button" onclick="closeModal('addExpenseModal')" class="btn btn-ghost w-full">Cancel</button>
+        <button type="submit" form="addExpenseForm" class="btn btn-primary w-full">Record Expense</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Add Income #}
+<div id="addIncomeModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-header-title">Add Income</span>
+      <button class="close-btn" onclick="closeModal('addIncomeModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form action="{{ url_for('transactions.cash_in') }}" method="POST" class="dash-form" id="addIncomeForm">
+        <div class="form-group"><label>Date</label>
+          <input type="date" name="date" class="form-input" required value="{{ current_date }}"></div>
+        <div class="form-group"><label>Amount (৳)</label>
+          <input type="number" step="0.01" name="amount" class="form-input" placeholder="0.00" required min="0.01"></div>
+        <div class="form-group" style="margin-bottom:0"><label>Source</label>
+          <select name="description" class="form-input" required>
+            <option value="">Select source</option>
+            <option value="From Home/Family">From Home / Family</option>
+            <option value="Salary/Wages">Salary / Wages</option>
+            <option value="Freelancing/Part-time">Freelancing / Part-time</option>
+            <option value="Borrow/Loan">Borrow / Loan</option>
+            <option value="Others">Others</option>
+          </select></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <div style="display:flex;gap:0.75rem">
+        <button type="button" onclick="closeModal('addIncomeModal')" class="btn btn-ghost w-full">Cancel</button>
+        <button type="submit" form="addIncomeForm" class="btn btn-success w-full">Add Income</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Set Budget #}
 <div id="setBudgetModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('setBudgetModal')">&times;</span>
-        <h3 class="card-title">Set Monthly Budget</h3>
-        <form method="POST" action="{{ url_for('budgets.set_budget') }}" class="dash-form">
-            <div class="form-group">
-                <label>Category (Optional)</label>
-                <select name="category_id" class="form-input">
-                    <option value="">-- Total Monthly Budget --</option>
-                    {% for c in categories %}
-                    <option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Budget Amount (৳)</label>
-                <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 15000" required>
-            </div>
-            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1rem;">This will set the budget for the
-                current month.</p>
-            <button type="submit" class="btn-primary w-full">Save Budget</button>
-        </form>
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-header-title">Set Budget</span>
+      <button class="close-btn" onclick="closeModal('setBudgetModal')">✕</button>
     </div>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('budgets.set_budget') }}" class="dash-form" id="setBudgetForm">
+        <div class="form-group"><label>Category <span style="color:var(--ink-4);font-weight:400">(blank = total monthly)</span></label>
+          <select name="category_id" class="form-input">
+            <option value="">— Total Monthly Budget —</option>
+            {% for c in categories %}<option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>{% endfor %}
+          </select></div>
+        <div class="form-group" style="margin-bottom:0"><label>Amount (৳)</label>
+          <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 15000" required></div>
+        <p style="font-size:0.78rem;color:var(--ink-3);margin-top:0.625rem">Applies to {{ curr_month_label }}.</p>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="submit" form="setBudgetForm" class="btn btn-primary w-full">Save Budget</button>
+    </div>
+  </div>
 </div>
 
-<!-- Edit Expense Modal -->
+{# Edit Expense #}
 <div id="editExpenseModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('editExpenseModal')">&times;</span>
-        <h3 class="card-title">Edit Expense</h3>
-        <form id="editExpenseForm" method="POST" class="dash-form">
-            <div class="form-group">
-                <label>Date</label>
-                <input type="date" id="edit_exp_date" name="date" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Category</label>
-                <select id="edit_exp_category_id" name="category_id" class="form-input" required>
-                    <option value="">Select Category</option>
-                    {% for c in categories %}
-                    <option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Amount (৳)</label>
-                <input type="number" step="0.01" id="edit_exp_amount" name="amount" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Short Note</label>
-                <input type="text" id="edit_exp_desc" name="description" class="form-input" autocomplete="off">
-            </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
-                <button type="button" onclick="closeModal('editExpenseModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-                <button type="submit" class="btn-primary" style="flex: 1;">Save Changes</button>
-            </div>
-        </form>
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-header-title">Edit Expense</span>
+      <button class="close-btn" onclick="closeModal('editExpenseModal')">✕</button>
     </div>
+    <div class="modal-body">
+      <form id="editExpenseForm" method="POST" class="dash-form">
+        <div class="form-group"><label>Date</label>
+          <input type="date" id="edit_exp_date" name="date" class="form-input" required></div>
+        <div class="form-group"><label>Category</label>
+          <select id="edit_exp_category_id" name="category_id" class="form-input" required>
+            <option value="">Select category</option>
+            {% for c in categories %}<option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>{% endfor %}
+          </select></div>
+        <div class="form-group"><label>Amount (৳)</label>
+          <input type="number" step="0.01" id="edit_exp_amount" name="amount" class="form-input" required></div>
+        <div class="form-group" style="margin-bottom:0"><label>Note</label>
+          <input type="text" id="edit_exp_desc" name="description" class="form-input" autocomplete="off"></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <div style="display:flex;gap:0.75rem">
+        <button type="button" onclick="closeModal('editExpenseModal')" class="btn btn-ghost w-full">Cancel</button>
+        <button type="submit" form="editExpenseForm" class="btn btn-primary w-full">Save Changes</button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Edit Income Modal -->
+{# Edit Income #}
 <div id="editIncomeModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('editIncomeModal')">&times;</span>
-        <h3 class="card-title">Edit Cash-in</h3>
-        <form id="editIncomeForm" method="POST" class="dash-form">
-            <div class="form-group">
-                <label>Date</label>
-                <input type="date" id="edit_inc_date" name="date" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Amount (৳)</label>
-                <input type="number" step="0.01" id="edit_inc_amount" name="amount" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Source</label>
-                <select id="edit_inc_desc" name="description" class="form-input" required>
-                    <option value="From Home/Family">From Home/Family</option>
-                    <option value="Salary/Wages">Salary/Wages</option>
-                    <option value="Freelancing/Part-time">Freelancing/Part-time</option>
-                    <option value="Borrow/Loan">Borrow/Loan</option>
-                    <option value="Others">Others</option>
-                </select>
-            </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
-                <button type="button" onclick="closeModal('editIncomeModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-                <button type="submit" class="btn-success" style="flex: 1;">Save Changes</button>
-            </div>
-        </form>
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-header-title">Edit Income</span>
+      <button class="close-btn" onclick="closeModal('editIncomeModal')">✕</button>
     </div>
+    <div class="modal-body">
+      <form id="editIncomeForm" method="POST" class="dash-form">
+        <div class="form-group"><label>Date</label>
+          <input type="date" id="edit_inc_date" name="date" class="form-input" required></div>
+        <div class="form-group"><label>Amount (৳)</label>
+          <input type="number" step="0.01" id="edit_inc_amount" name="amount" class="form-input" required></div>
+        <div class="form-group" style="margin-bottom:0"><label>Source</label>
+          <select id="edit_inc_desc" name="description" class="form-input" required>
+            <option value="From Home/Family">From Home / Family</option>
+            <option value="Salary/Wages">Salary / Wages</option>
+            <option value="Freelancing/Part-time">Freelancing / Part-time</option>
+            <option value="Borrow/Loan">Borrow / Loan</option>
+            <option value="Others">Others</option>
+          </select></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <div style="display:flex;gap:0.75rem">
+        <button type="button" onclick="closeModal('editIncomeModal')" class="btn btn-ghost w-full">Cancel</button>
+        <button type="submit" form="editIncomeForm" class="btn btn-success w-full">Save Changes</button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+{# Delete #}
 <div id="deleteModal" class="modal">
-    <div class="modal-content" style="max-width: 380px; text-align: center; padding: 2.5rem 2rem;">
-        <div style="width: 56px; height: 56px; background: var(--danger-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-size: 1.4rem; color: var(--danger);">✕</div>
-        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--ink);">Delete Transaction</h3>
-        <p id="deleteModalMsg" style="color: var(--ink-muted); font-size: 0.9rem; margin-bottom: 1.75rem; line-height: 1.5;"></p>
-        <div style="display: flex; gap: 0.75rem;">
-            <button type="button" onclick="closeModal('deleteModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-            <form id="deleteModalForm" method="POST" style="flex: 1;">
-                <button type="submit" class="btn-danger" style="width: 100%;">Yes, Delete</button>
-            </form>
-        </div>
+  <div class="modal-content modal-sm">
+    <div class="modal-body" style="text-align:center;padding-top:1.75rem">
+      <div style="width:52px;height:52px;background:var(--danger-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.25rem;color:var(--danger);border:1px solid var(--danger-border)">✕</div>
+      <h3 style="font-size:1.0625rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink)">Confirm Delete</h3>
+      <p id="deleteModalMsg" style="color:var(--ink-3);font-size:0.875rem;margin-bottom:0;line-height:1.5"></p>
     </div>
+    <div class="modal-footer">
+      <div style="display:flex;gap:0.75rem">
+        <button type="button" onclick="closeModal('deleteModal')" class="btn btn-ghost w-full">Cancel</button>
+        <form id="deleteModalForm" method="POST" style="flex:1">
+          <button type="submit" class="btn btn-danger w-full">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function openExpenseModal(btn) {
-        const id = btn.getAttribute('data-id');
-        const date = btn.getAttribute('data-date');
-        const catId = btn.getAttribute('data-catid');
-        const amount = btn.getAttribute('data-amount');
-        const desc = btn.getAttribute('data-desc');
-
-        document.getElementById('edit_exp_date').value = date;
-        document.getElementById('edit_exp_category_id').value = catId;
-        document.getElementById('edit_exp_amount').value = amount;
-        document.getElementById('edit_exp_desc').value = (desc === 'null' || desc === 'None') ? '' : desc;
-        document.getElementById('editExpenseForm').action = "/expenses/" + id + "/edit";
-        document.getElementById('editExpenseModal').style.display = "block";
-    }
-
-    function openIncomeModal(btn) {
-        const id = btn.getAttribute('data-id');
-        const date = btn.getAttribute('data-date');
-        const amount = btn.getAttribute('data-amount');
-        const desc = btn.getAttribute('data-desc');
-
-        document.getElementById('edit_inc_date').value = date;
-        document.getElementById('edit_inc_amount').value = amount;
-        document.getElementById('edit_inc_desc').value = desc;
-        document.getElementById('editIncomeForm').action = "/incomes/" + id + "/edit";
-        document.getElementById('editIncomeModal').style.display = "block";
-    }
-
-    function closeModal(modalId) {
-        document.getElementById(modalId).style.display = "none";
-    }
-
-    function openDeleteModal(btn) {
-        document.getElementById('deleteModalMsg').textContent = btn.getAttribute('data-msg');
-        document.getElementById('deleteModalForm').action = btn.getAttribute('data-url');
-        document.getElementById('deleteModal').style.display = 'block';
-    }
-
-    window.onclick = function (event) {
-        ['editExpenseModal', 'editIncomeModal', 'setBudgetModal', 'deleteModal'].forEach(function(id) {
-            if (event.target == document.getElementById(id)) closeModal(id);
-        });
-    }
+function openModal(id) { var m=document.getElementById(id); m.style.display='flex'; setTimeout(function(){m.classList.add('open');},10); }
+function closeModal(id) { var m=document.getElementById(id); m.classList.remove('open'); setTimeout(function(){m.style.display='none';},320); }
+function openExpenseModal(btn) {
+  document.getElementById('edit_exp_date').value = btn.dataset.date;
+  document.getElementById('edit_exp_category_id').value = btn.dataset.catid;
+  document.getElementById('edit_exp_amount').value = btn.dataset.amount;
+  var d = btn.dataset.desc;
+  document.getElementById('edit_exp_desc').value = (d==='null'||d==='None') ? '' : d;
+  document.getElementById('editExpenseForm').action = '/expenses/'+btn.dataset.id+'/edit';
+  openModal('editExpenseModal');
+}
+function openIncomeModal(btn) {
+  document.getElementById('edit_inc_date').value = btn.dataset.date;
+  document.getElementById('edit_inc_amount').value = btn.dataset.amount;
+  document.getElementById('edit_inc_desc').value = btn.dataset.desc || '';
+  document.getElementById('editIncomeForm').action = '/incomes/'+btn.dataset.id+'/edit';
+  openModal('editIncomeModal');
+}
+function openDeleteModal(btn) {
+  document.getElementById('deleteModalMsg').textContent = btn.dataset.msg;
+  document.getElementById('deleteModalForm').action = btn.dataset.url;
+  openModal('deleteModal');
+}
+window.addEventListener('click',function(e){
+  ['addExpenseModal','addIncomeModal','setBudgetModal','editExpenseModal','editIncomeModal','deleteModal'].forEach(function(id){
+    if(e.target===document.getElementById(id)) closeModal(id);
+  });
+});
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+  if((e.ctrlKey||e.metaKey)&&e.key==='e'){e.preventDefault();openModal('addExpenseModal');}
+  if((e.ctrlKey||e.metaKey)&&e.key==='i'){e.preventDefault();openModal('addIncomeModal');}
+  if(e.key==='Escape')['addExpenseModal','addIncomeModal','setBudgetModal','editExpenseModal','editIncomeModal','deleteModal'].forEach(closeModal);
+});
 </script>
 {% endblock %}

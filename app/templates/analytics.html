@@ -1,214 +1,283 @@
 {% extends "base.html" %}
-
 {% block title %}Analytics — Spendly{% endblock %}
 
 {% block content %}
-<div class="dash-wrapper">
-    <div class="dash-container">
 
-        <!-- Header & Filter -->
-        <header class="dash-header analytics-header">
-            <div class="header-left">
-                <h1 class="dash-title">Analytics & Insights</h1>
-                <p class="greeting">Deep dive into your financial habits.</p>
-            </div>
-
-            <div class="header-right">
-                <form method="GET" action="{{ url_for('analytics.index') }}" class="month-filter-form">
-                    <select name="month" class="form-input select-month" onchange="this.form.submit()">
-                        {% for m in all_months %}
-                        <option value="{{ m }}" {% if m==selected %}selected{% endif %}>
-                            {{ m }}
-                        </option>
-                        {% else %}
-                        <option value="">No data available</option>
-                        {% endfor %}
-                    </select>
-                </form>
-            </div>
-        </header>
-
-        <!-- Selected Month Overview -->
-
-        <!-- Monthly Budget Usage -->
-        {% if monthly_budget > 0 %}
-        <div
-            style="background: var(--surface); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
-                <span style="font-weight: 500;">Overall Monthly Budget ({{ selected_label }})</span>
-                <span style="color: var(--text-secondary);">৳{{ "%.2f"|format(sm_expense|default(0)) }} / ৳{{
-                    "%.2f"|format(monthly_budget) }}</span>
-            </div>
-            <div class="progress-bar-bg"
-                style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
-                <div class="progress-fill"
-                    style="width: {{ budget_used_percent }}%; height: 100%; background: {% if budget_used_percent > 90 %}var(--danger){% elif budget_used_percent > 75 %}var(--warning){% else %}var(--primary){% endif %}; transition: width 0.8s ease-out;">
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <h3 class="section-title">Overview: {{ selected_label }}</h3>
-        <div class="stats-grid stats-3">
-            <div class="stat-card">
-                <p class="stat-label">Total Cash In</p>
-                <h2 class="stat-value amount-in">৳ {{ "%.2f"|format(sm_income|default(0)) }}</h2>
-            </div>
-            <div class="stat-card">
-                <p class="stat-label">Total Spent</p>
-                <h2 class="stat-value amount-out">৳ {{ "%.2f"|format(sm_expense|default(0)) }}</h2>
-                {% if mom_change_percent %}
-                {% if mom_change_percent > 0 %}
-                <p class="stat-trend trend-down">↑ {{ "%.1f"|format(mom_change_percent) }}% vs last month</p>
-                {% elif mom_change_percent < 0 %} <p class="stat-trend trend-up">↓ {{
-                    "%.1f"|format(mom_change_percent|abs) }}% vs last month</p>
-                    {% endif %}
-                    {% endif %}
-            </div>
-            <div class="stat-card {% if sm_saved >= 0 %}stat-primary{% else %}stat-danger{% endif %}">
-                <p class="stat-label">Saved this month</p>
-                <h2 class="stat-value">৳ {{ "%.2f"|format(sm_saved|default(0)) }}</h2>
-            </div>
-        </div>
-
-        <div class="analytics-grid">
-            <!-- Category Breakdown -->
-            <div class="card-full">
-                <h3 class="card-title">Where your money went ({{ selected_label }})</h3>
-
-                <div class="cat-bars-container">
-                    {% for cat in cat_breakdown %}
-                    <div class="cat-bar-row">
-                        <div class="cat-info">
-                            <span class="cat-icon">{{ cat.icon }}</span>
-                            <span class="cat-name">{{ cat.name }}</span>
-                        </div>
-                        <div class="cat-track">
-                            <div class="cat-fill" style="width: {{ (cat.total / max_cat_amount * 100)|round }}%;"></div>
-                        </div>
-                        <div class="cat-amount">৳ {{ "%.0f"|format(cat.total) }}</div>
-                    </div>
-                    {% else %}
-                    <p class="empty-state">No expenses recorded for this month.</p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Month over Month Trend -->
-            <div class="card-full">
-                <h3 class="card-title">6-Month Trend</h3>
-                <div class="table-responsive">
-                    <table class="dash-table">
-                        <thead>
-                            <tr>
-                                <th>Month</th>
-                                <th class="text-right">Cash In</th>
-                                <th class="text-right">Spent</th>
-                                <th class="text-right">Saved</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for t in monthly_trend %}
-                            <tr>
-                                <td><strong>{{ t.label }}</strong></td>
-                                <td class="text-right amount-in">৳{{ "%.0f"|format(t.income) }}</td>
-                                <td class="text-right amount-out">৳{{ "%.0f"|format(t.expense) }}</td>
-                                <td class="text-right {% if t.saved >= 0 %}amount-in{% else %}amount-out{% endif %}">
-                                    ৳{{ "%.0f"|format(t.saved) }}
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center empty-state">No historic data available.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Behavioral Insights -->
-        <h3 class="section-title" style="margin-top: 2rem;">Behavioral Insights ({{ selected_label }})</h3>
-        <div class="analytics-grid">
-            <!-- Top Expenses -->
-            <div class="card-full">
-                <h3 class="card-title">Top 3 Largest Expenses</h3>
-                <div class="table-responsive">
-                    <table class="dash-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Details</th>
-                                <th class="text-right">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for e in top_expenses %}
-                            <tr>
-                                <td>{{ e.date|format_date }}</td>
-                                <td><strong>{{ e.icon }} {{ e.name }}</strong><br><span
-                                        style="font-size:0.85rem; color:var(--text-secondary);">{{ e.description or 'No
-                                        note' }}</span></td>
-                                <td class="text-right amount-out">- ৳{{ "%.2f"|format(e.amount) }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="3" class="text-center empty-state">No expenses to analyze.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Day of Week Analysis -->
-            <div class="card-full">
-                <h3 class="card-title">Spending by Day of Week</h3>
-                <div class="cat-bars-container">
-                    {% set max_dow = highest_dow.total if highest_dow else 1 %}
-                    {% for d in dow_data %}
-                    <div class="cat-bar-row">
-                        <div class="cat-info">
-                            <span class="cat-name">{{ d.dow }}</span>
-                        </div>
-                        <div class="cat-track">
-                            <div class="cat-fill {% if d.dow == (highest_dow.dow if highest_dow else '') %}trend-up-bg{% endif %}"
-                                style="width: {{ (d.total / max_dow * 100)|round if max_dow > 0 else 0 }}%; background: {% if d.dow == (highest_dow.dow if highest_dow else '') %}var(--danger){% else %}var(--primary){% endif %};">
-                            </div>
-                        </div>
-                        <div class="cat-amount">৳ {{ "%.0f"|format(d.total) }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% if highest_dow and highest_dow.total > 0 %}
-                <p style="margin-top: 1.5rem; font-size: 0.95rem; color: var(--text-secondary); text-align: center;">You
-                    spend the most on <strong style="color:var(--text-primary);">{{ highest_dow.dow }}s</strong>.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Lifetime Stats -->
-        <h3 class="section-title" style="margin-top: 2rem;">Lifetime Account Summary</h3>
-        <div class="stats-grid">
-            <div class="stat-card">
-                <p class="stat-label">Total Transactions</p>
-                <h2 class="stat-value">{{ total_transactions + total_cashins }}</h2>
-            </div>
-            <div class="stat-card">
-                <p class="stat-label">Lifetime Cash Added</p>
-                <h2 class="stat-value amount-in">৳ {{ "%.2f"|format(total_income|default(0)) }}</h2>
-            </div>
-            <div class="stat-card">
-                <p class="stat-label">Lifetime Spent</p>
-                <h2 class="stat-value amount-out">৳ {{ "%.2f"|format(total_expense|default(0)) }}</h2>
-            </div>
-            <div class="stat-card stat-primary">
-                <p class="stat-label">Lifetime Savings</p>
-                <h2 class="stat-value">৳ {{ "%.2f"|format(lifetime_saved|default(0)) }}</h2>
-            </div>
-        </div>
-
-    </div>
+<div class="page-header">
+  <div class="page-header-left">
+    <p class="page-eyebrow">Insights & patterns</p>
+    <h1 class="page-title">Analytics</h1>
+  </div>
+  <div class="page-header-right">
+    <form method="GET" action="{{ url_for('analytics.index') }}" class="month-filter-form">
+      <select name="month" class="form-input select-month" onchange="this.form.submit()">
+        {% for m in all_months %}
+        <option value="{{ m }}" {% if m==selected %}selected{% endif %}>{{ m }}</option>
+        {% else %}
+        <option value="">No data</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
 </div>
+
+{# Budget progress for selected month #}
+{% if monthly_budget > 0 %}
+<div class="budget-section" style="margin-bottom:1.5rem">
+  <div class="budget-header">
+    <span class="budget-title">Budget — {{ selected_label }}</span>
+    <span class="budget-amounts">৳{{ "%.0f"|format(sm_expense|default(0)) }} / ৳{{ "%.0f"|format(monthly_budget) }}</span>
+  </div>
+  <div class="progress-bar-bg">
+    <div class="progress-fill {% if budget_used_percent > 90 %}p-danger{% elif budget_used_percent > 75 %}p-warning{% else %}p-success{% endif %}"
+         style="width:{{ budget_used_percent }}%"></div>
+  </div>
+</div>
+{% endif %}
+
+{# Overview stats #}
+<div class="stats-grid stats-3" style="margin-bottom:1.5rem">
+  <div class="stat-card s-success">
+    <p class="stat-label">Cash In</p>
+    <h2 class="stat-value">৳ {{ "%.0f"|format(sm_income|default(0)) }}</h2>
+  </div>
+  <div class="stat-card s-danger">
+    <p class="stat-label">Total Spent</p>
+    <h2 class="stat-value">৳ {{ "%.0f"|format(sm_expense|default(0)) }}</h2>
+    {% if mom_change_percent %}
+      {% if mom_change_percent > 0 %}
+      <p class="stat-trend trend-down">↑ {{ "%.1f"|format(mom_change_percent) }}% vs last month</p>
+      {% elif mom_change_percent < 0 %}
+      <p class="stat-trend trend-up">↓ {{ "%.1f"|format(mom_change_percent|abs) }}% vs last month</p>
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="stat-card {% if sm_saved >= 0 %}s-dark{% else %}s-danger{% endif %}">
+    <p class="stat-label">Saved</p>
+    <h2 class="stat-value">৳ {{ "%.0f"|format(sm_saved|default(0)) }}</h2>
+  </div>
+</div>
+
+{# 6-Month Trend Chart + Category Breakdown #}
+<div class="analytics-grid">
+
+  {# Trend chart #}
+  <div class="card-full">
+    <h3 class="card-title">6-Month Trend</h3>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#10b981"></span> Income</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#f43f5e"></span> Expense</span>
+    </div>
+    <div class="chart-wrapper">
+      <svg id="trend-svg" class="chart-svg" viewBox="0 0 600 220" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <script type="application/json" id="trend-data">{{ monthly_trend | tojson }}</script>
+  </div>
+
+  {# Category breakdown #}
+  <div class="card-full">
+    <h3 class="card-title">Where your money went</h3>
+    <div class="cat-bars-container">
+      {% for cat in cat_breakdown %}
+      <div class="cat-bar-row">
+        <div class="cat-info">
+          <span>{{ cat.icon }}</span>
+          <span>{{ cat.name }}</span>
+        </div>
+        <div class="cat-track">
+          <div class="cat-fill" style="width:{{ (cat.total / max_cat_amount * 100)|round if max_cat_amount > 0 else 0 }}%;
+               background:{% if loop.index == 1 %}var(--grad-accent){% elif loop.index == 2 %}var(--grad-emerald){% elif loop.index == 3 %}var(--grad-blue){% else %}linear-gradient(90deg,#7c3aed,#8b5cf6){% endif %}">
+          </div>
+        </div>
+        <div class="cat-amount">৳ {{ "%.0f"|format(cat.total) }}</div>
+      </div>
+      {% else %}
+      <p class="empty-state">No expenses for this month.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+{# Behavioral Insights #}
+<p class="section-title" style="margin-top:0.5rem">Behavioral Insights</p>
+<div class="analytics-grid">
+
+  {# Top 3 expenses #}
+  <div class="card-full">
+    <h3 class="card-title">Top 3 Largest Expenses</h3>
+    <div class="table-responsive">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Details</th>
+            <th class="text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in top_expenses %}
+          <tr>
+            <td>{{ e.date|format_date }}</td>
+            <td>
+              <strong>{{ e.icon }} {{ e.name }}</strong><br>
+              <span style="font-size:0.8125rem;color:var(--ink-3)">{{ e.description or 'No note' }}</span>
+            </td>
+            <td class="text-right amount-out">- ৳{{ "%.2f"|format(e.amount) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center empty-state">No expenses.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# Day of week analysis #}
+  <div class="card-full">
+    <h3 class="card-title">Spending by Day of Week</h3>
+    <div class="cat-bars-container">
+      {% set max_dow = highest_dow.total if highest_dow else 1 %}
+      {% for d in dow_data %}
+      <div class="cat-bar-row">
+        <div class="cat-info">
+          <span>{{ d.dow }}</span>
+        </div>
+        <div class="cat-track">
+          <div class="cat-fill"
+               style="width:{{ (d.total / max_dow * 100)|round if max_dow > 0 else 0 }}%;
+                      background:{% if d.dow == (highest_dow.dow if highest_dow else '') %}var(--danger){% else %}var(--accent){% endif %}">
+          </div>
+        </div>
+        <div class="cat-amount">৳ {{ "%.0f"|format(d.total) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if highest_dow and highest_dow.total > 0 %}
+    <p style="margin-top:1.25rem;font-size:0.875rem;color:var(--ink-3);text-align:center">
+      You spend the most on <strong style="color:var(--ink)">{{ highest_dow.dow }}s</strong>
+    </p>
+    {% endif %}
+  </div>
+
+</div>
+
+{# Lifetime Stats #}
+<p class="section-title" style="margin-top:0.5rem">Lifetime Summary</p>
+<div class="stats-grid">
+  <div class="stat-card">
+    <p class="stat-label">Total Transactions</p>
+    <h2 class="stat-value">{{ total_transactions + total_cashins }}</h2>
+  </div>
+  <div class="stat-card s-success">
+    <p class="stat-label">Lifetime Income</p>
+    <h2 class="stat-value">৳ {{ "%.0f"|format(total_income|default(0)) }}</h2>
+  </div>
+  <div class="stat-card">
+    <p class="stat-label">Lifetime Spent</p>
+    <h2 class="stat-value">৳ {{ "%.0f"|format(total_expense|default(0)) }}</h2>
+  </div>
+  <div class="stat-card s-dark">
+    <p class="stat-label">Lifetime Savings</p>
+    <h2 class="stat-value">৳ {{ "%.0f"|format(lifetime_saved|default(0)) }}</h2>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var dataEl = document.getElementById('trend-data');
+  var svg = document.getElementById('trend-svg');
+  if (!dataEl || !svg) return;
+
+  var data = JSON.parse(dataEl.textContent || '[]').reverse();
+  if (!data.length) {
+    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#a8a5a0" font-size="13" font-family="Inter,sans-serif">No trend data available</text>';
+    return;
+  }
+
+  var W = 600, H = 220, padL = 52, padR = 20, padT = 16, padB = 48;
+  var dW = W - padL - padR, dH = H - padT - padB;
+  var n = data.length;
+
+  var maxVal = 1;
+  data.forEach(function(d) {
+    if (d.income > maxVal) maxVal = d.income;
+    if (d.expense > maxVal) maxVal = d.expense;
+  });
+
+  function xPos(i) { return padL + (n === 1 ? dW/2 : i / (n-1) * dW); }
+  function yPos(v) { return padT + (1 - v/maxVal) * dH; }
+
+  var svgNS = 'http://www.w3.org/2000/svg';
+
+  function el(tag, attrs) {
+    var e = document.createElementNS(svgNS, tag);
+    Object.keys(attrs).forEach(function(k) { e.setAttribute(k, attrs[k]); });
+    return e;
+  }
+
+  // Grid lines
+  [0, 0.25, 0.5, 0.75, 1].forEach(function(t) {
+    var y = padT + (1-t) * dH;
+    svg.appendChild(el('line', {x1: padL, y1: y, x2: W-padR, y2: y, stroke: '#e5e3de', 'stroke-width': '1'}));
+    var label = Math.round(maxVal * t);
+    var txt = el('text', {x: padL - 6, y: y + 4, 'text-anchor': 'end', fill: '#a8a5a0', 'font-size': '10', 'font-family': 'Inter,sans-serif'});
+    txt.textContent = label >= 1000 ? (label/1000).toFixed(1)+'k' : label;
+    svg.appendChild(txt);
+  });
+
+  // Build smooth polyline points
+  function buildPath(arr) {
+    if (arr.length === 1) return 'M ' + xPos(0) + ' ' + yPos(arr[0]) + ' L ' + xPos(0) + ' ' + yPos(arr[0]);
+    var d = 'M ' + xPos(0) + ' ' + yPos(arr[0]);
+    for (var i = 1; i < arr.length; i++) {
+      var x0 = xPos(i-1), y0 = yPos(arr[i-1]);
+      var x1 = xPos(i), y1 = yPos(arr[i]);
+      var cpx = (x0 + x1) / 2;
+      d += ' C ' + cpx + ' ' + y0 + ', ' + cpx + ' ' + y1 + ', ' + x1 + ' ' + y1;
+    }
+    return d;
+  }
+
+  var incomes = data.map(function(d) { return d.income; });
+  var expenses = data.map(function(d) { return d.expense; });
+
+  // Area fills
+  function buildArea(arr, color) {
+    var path = buildPath(arr);
+    var lastX = xPos(arr.length-1), firstX = xPos(0), baseY = padT + dH;
+    return path + ' L ' + lastX + ' ' + baseY + ' L ' + firstX + ' ' + baseY + ' Z';
+  }
+
+  var incomeArea = el('path', {d: buildArea(incomes), fill: 'rgba(16,185,129,0.08)', stroke: 'none'});
+  var expenseArea = el('path', {d: buildArea(expenses), fill: 'rgba(244,63,94,0.08)', stroke: 'none'});
+  svg.appendChild(incomeArea);
+  svg.appendChild(expenseArea);
+
+  // Lines
+  var incomeLine = el('path', {d: buildPath(incomes), fill: 'none', stroke: '#10b981', 'stroke-width': '2.5', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'});
+  var expenseLine = el('path', {d: buildPath(expenses), fill: 'none', stroke: '#f43f5e', 'stroke-width': '2.5', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'});
+  svg.appendChild(incomeLine);
+  svg.appendChild(expenseLine);
+
+  // Dots
+  data.forEach(function(d, i) {
+    var ix = xPos(i), iy = yPos(d.income);
+    var ex = xPos(i), ey = yPos(d.expense);
+    svg.appendChild(el('circle', {cx: ix, cy: iy, r: '4', fill: '#fff', stroke: '#10b981', 'stroke-width': '2'}));
+    svg.appendChild(el('circle', {cx: ex, cy: ey, r: '4', fill: '#fff', stroke: '#f43f5e', 'stroke-width': '2'}));
+  });
+
+  // X-axis labels
+  data.forEach(function(d, i) {
+    var x = xPos(i);
+    var txt = el('text', {x: x, y: H - 8, 'text-anchor': 'middle', fill: '#7a7875', 'font-size': '10', 'font-family': 'Inter,sans-serif'});
+    txt.textContent = d.label || '';
+    svg.appendChild(txt);
+  });
+})();
+</script>
 {% endblock %}

@@ -1,234 +1,244 @@
 {% extends "base.html" %}
-
-{% block title %}Transaction History — Spendly{% endblock %}
+{% block title %}History — Spendly{% endblock %}
 
 {% block content %}
-<div class="dash-wrapper">
-    <div class="dash-container">
-        <header class="dash-header">
-            <div class="header-left">
-                <h1 class="dash-title">All Transactions</h1>
-            </div>
-            <div class="header-right" style="display: flex; gap: 10px;">
-                <a href="{{ url_for('export.export_transactions') }}" class="btn-success">Export to CSV</a>
-            </div>
-        </header>
 
-        <!-- Filters -->
-        <div class="form-card" style="margin-bottom: 2rem;">
-            <form method="GET" action="{{ url_for('transactions.history') }}" class="filters-form"
-                style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 1 1 150px; margin-bottom: 0;">
-                    <label>Month</label>
-                    <select name="month" class="form-input">
-                        <option value="">All Time</option>
-                        {% for m in all_months %}
-                        <option value="{{ m }}" {% if m==filter_month %}selected{% endif %}>{{ m }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group" style="flex: 1 1 150px; margin-bottom: 0;">
-                    <label>Type</label>
-                    <select name="type" class="form-input">
-                        <option value="">All Types</option>
-                        <option value="expense" {% if filter_type=='expense' %}selected{% endif %}>Expense</option>
-                        <option value="income" {% if filter_type=='income' %}selected{% endif %}>Income</option>
-                    </select>
-                </div>
-                <div class="form-group" style="flex: 1 1 200px; margin-bottom: 0;">
-                    <label>Category</label>
-                    <select name="category_id" class="form-input">
-                        <option value="">All Categories</option>
-                        {% for c in categories %}
-                        <option value="{{ c.id }}" {% if filter_cat==c.id|string %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div style="display: flex; gap: 0.5rem; flex: 1 1 auto; justify-content: flex-end;">
-                    <button type="submit" class="btn-primary" style="padding: 0.6rem 1.5rem;">Filter</button>
-                    <a href="{{ url_for('transactions.history') }}" class="btn-ghost" style="padding: 0.6rem 1.5rem; text-decoration: none;">Clear</a>
-                </div>
-            </form>
-        </div>
-
-        <!-- Transactions Table -->
-        <div class="table-card" style="grid-column: span 2;">
-            <h3 class="card-title">Transactions</h3>
-            <div class="table-responsive">
-                <table class="dash-table">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Date</th>
-                            <th>Category</th>
-                            <th>Note</th>
-                            <th class="text-right">Amount</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for txn in transactions %}
-                        <tr>
-                            <td>
-                                {% if txn.txn_type == 'expense' %}
-                                <span class="trend-down">Expense</span>
-                                {% else %}
-                                <span class="trend-up">Income</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ txn.date|format_date }}</td>
-                            <td><span class="cat-pill">{{ txn.category_icon }} {{ txn.category_name }}</span></td>
-                            <td>{{ txn.description or '-' }}</td>
-                            <td class="text-right {% if txn.txn_type == 'expense' %}amount-out{% else %}amount-in{% endif %}">
-                                {% if txn.txn_type == 'expense' %}-{% else %}+{% endif %} ৳{{ "%.2f"|format(txn.amount) }}
-                            </td>
-                            <td class="text-right actions-cell">
-                                {% if txn.txn_type == 'expense' %}
-                                <button class="action-btn edit-btn"
-                                    onclick="openExpenseModal({{ txn.id }}, '{{ txn.date|format_date }}', {{ txn.category_id or 0 }}, {{ txn.amount }}, {{ txn.description|tojson|forceescape }})">✏ Edit</button>
-                                <button class="action-btn delete-btn"
-                                    data-url="{{ url_for('transactions.delete_expense', id=txn.id) }}"
-                                    data-msg="Delete ৳{{ '%.2f'|format(txn.amount) }} ({{ txn.category_name }}) expense?"
-                                    onclick="openDeleteModal(this)">✕ Delete</button>
-                                {% else %}
-                                <button class="action-btn edit-btn"
-                                    onclick="openIncomeModal({{ txn.id }}, '{{ txn.date|format_date }}', {{ txn.amount }}, {{ txn.description|tojson|forceescape }})">✏ Edit</button>
-                                <button class="action-btn delete-btn"
-                                    data-url="{{ url_for('transactions.delete_income', id=txn.id) }}"
-                                    data-msg="Delete ৳{{ '%.2f'|format(txn.amount) }} income?"
-                                    onclick="openDeleteModal(this)">✕ Delete</button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center empty-state">No transactions found for these filters.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+<div class="page-header">
+  <div class="page-header-left">
+    <p class="page-eyebrow">All transactions</p>
+    <h1 class="page-title">History</h1>
+  </div>
+  <div class="page-header-right">
+    <a href="{{ url_for('export.export_transactions') }}" class="btn btn-ghost btn-sm">↓ Export CSV</a>
+  </div>
 </div>
 
-<!-- Edit Expense Modal -->
+{# Filters #}
+<div class="card card-pad" style="margin-bottom:1.25rem">
+  <form method="GET" action="{{ url_for('transactions.history') }}"
+        style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
+    <div class="form-group" style="flex:1 1 150px;margin-bottom:0">
+      <label>Month</label>
+      <select name="month" class="form-input">
+        <option value="">All time</option>
+        {% for m in all_months %}
+        <option value="{{ m }}" {% if m==filter_month %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="flex:1 1 140px;margin-bottom:0">
+      <label>Type</label>
+      <select name="type" class="form-input">
+        <option value="">All types</option>
+        <option value="expense" {% if filter_type=='expense' %}selected{% endif %}>Expense</option>
+        <option value="income" {% if filter_type=='income' %}selected{% endif %}>Income</option>
+      </select>
+    </div>
+    <div class="form-group" style="flex:1 1 180px;margin-bottom:0">
+      <label>Category</label>
+      <select name="category_id" class="form-input">
+        <option value="">All categories</option>
+        {% for c in categories %}
+        <option value="{{ c.id }}" {% if filter_cat==c.id|string %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-shrink:0;padding-bottom:0.05rem">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      <a href="{{ url_for('transactions.history') }}" class="btn btn-ghost btn-sm">Clear</a>
+    </div>
+  </form>
+</div>
+
+{# Live search #}
+<div class="search-bar-wrap" style="margin-bottom:1rem">
+  <span class="search-icon">
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="13.5" y2="13.5"/></svg>
+  </span>
+  <input type="text" id="txnSearch" class="search-bar" placeholder="Search by note, category, amount…" autocomplete="off">
+</div>
+
+{# Transactions table #}
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Category / Source</th>
+          <th>Note</th>
+          <th class="text-right">Amount</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for txn in transactions %}
+        <tr>
+          <td>
+            {% if txn.txn_type == 'expense' %}
+            <span class="tag tag-out">Out</span>
+            {% else %}
+            <span class="tag tag-in">In</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--ink-3);font-size:0.8125rem">{{ txn.date|format_date }}</td>
+          <td><span class="cat-pill">{{ txn.category_icon }} {{ txn.category_name }}</span></td>
+          <td style="color:var(--ink-3)">{{ txn.description or '—' }}</td>
+          <td class="text-right {% if txn.txn_type == 'expense' %}amount-out{% else %}amount-in{% endif %}">
+            {% if txn.txn_type == 'expense' %}-{% else %}+{% endif %} ৳{{ "%.2f"|format(txn.amount) }}
+          </td>
+          <td class="text-right actions-cell">
+            {% if txn.txn_type == 'expense' %}
+            <button class="action-btn edit-btn"
+              onclick="openExpenseModal({{ txn.id }}, '{{ txn.date|format_date }}', {{ txn.category_id or 0 }}, {{ txn.amount }}, {{ txn.description|tojson|forceescape }})">✏ Edit</button>
+            <button class="action-btn delete-btn"
+              data-url="{{ url_for('transactions.delete_expense', id=txn.id) }}"
+              data-msg="Delete ৳{{ '%.2f'|format(txn.amount) }} ({{ txn.category_name }}) expense?"
+              onclick="openDeleteModal(this)">✕ Delete</button>
+            {% else %}
+            <button class="action-btn edit-btn"
+              onclick="openIncomeModal({{ txn.id }}, '{{ txn.date|format_date }}', {{ txn.amount }}, {{ txn.description|tojson|forceescape }})">✏ Edit</button>
+            <button class="action-btn delete-btn"
+              data-url="{{ url_for('transactions.delete_income', id=txn.id) }}"
+              data-msg="Delete ৳{{ '%.2f'|format(txn.amount) }} income?"
+              onclick="openDeleteModal(this)">✕ Delete</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center empty-state">No transactions found for these filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ── MODALS ── #}
 <div id="editExpenseModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('editExpenseModal')">&times;</span>
-        <h3 class="card-title">Edit Expense</h3>
-        <form id="editExpenseForm" method="POST" class="dash-form">
-            <div class="form-group">
-                <label>Date</label>
-                <input type="date" id="hist_exp_date" name="date" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Category</label>
-                <select id="hist_exp_category" name="category_id" class="form-input" required>
-                    <option value="">Select Category</option>
-                    {% for c in categories %}
-                    <option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Amount (৳)</label>
-                <input type="number" step="0.01" id="hist_exp_amount" name="amount" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Short Note</label>
-                <input type="text" id="hist_exp_desc" name="description" class="form-input" autocomplete="off">
-            </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
-                <button type="button" onclick="closeModal('editExpenseModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-                <button type="submit" class="btn-primary" style="flex: 1;">Save Changes</button>
-            </div>
-        </form>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Expense</h3>
+      <button class="close-btn" onclick="closeModal('editExpenseModal')">&times;</button>
     </div>
+    <form id="editExpenseForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group"><label>Date</label>
+          <input type="date" id="hist_exp_date" name="date" class="form-input" required></div>
+        <div class="form-group"><label>Category</label>
+          <select id="hist_exp_category" name="category_id" class="form-input" required>
+            <option value="">Select category</option>
+            {% for c in categories %}<option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>{% endfor %}
+          </select></div>
+        <div class="form-group"><label>Amount (৳)</label>
+          <input type="number" step="0.01" id="hist_exp_amount" name="amount" class="form-input" required></div>
+        <div class="form-group"><label>Note</label>
+          <input type="text" id="hist_exp_desc" name="description" class="form-input" autocomplete="off"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('editExpenseModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<!-- Edit Income Modal -->
 <div id="editIncomeModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('editIncomeModal')">&times;</span>
-        <h3 class="card-title">Edit Cash-In</h3>
-        <form id="editIncomeForm" method="POST" class="dash-form">
-            <div class="form-group">
-                <label>Date</label>
-                <input type="date" id="hist_inc_date" name="date" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Amount (৳)</label>
-                <input type="number" step="0.01" id="hist_inc_amount" name="amount" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Source</label>
-                <select id="hist_inc_desc" name="description" class="form-input" required>
-                    <option value="From Home/Family">From Home/Family</option>
-                    <option value="Salary/Wages">Salary/Wages</option>
-                    <option value="Freelancing/Part-time">Freelancing/Part-time</option>
-                    <option value="Borrow/Loan">Borrow/Loan</option>
-                    <option value="Others">Others</option>
-                </select>
-            </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
-                <button type="button" onclick="closeModal('editIncomeModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-                <button type="submit" class="btn-success" style="flex: 1;">Save Changes</button>
-            </div>
-        </form>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Income</h3>
+      <button class="close-btn" onclick="closeModal('editIncomeModal')">&times;</button>
     </div>
+    <form id="editIncomeForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group"><label>Date</label>
+          <input type="date" id="hist_inc_date" name="date" class="form-input" required></div>
+        <div class="form-group"><label>Amount (৳)</label>
+          <input type="number" step="0.01" id="hist_inc_amount" name="amount" class="form-input" required></div>
+        <div class="form-group"><label>Source</label>
+          <select id="hist_inc_desc" name="description" class="form-input" required>
+            <option value="From Home/Family">From Home / Family</option>
+            <option value="Salary/Wages">Salary / Wages</option>
+            <option value="Freelancing/Part-time">Freelancing / Part-time</option>
+            <option value="Borrow/Loan">Borrow / Loan</option>
+            <option value="Others">Others</option>
+          </select></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('editIncomeModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-success">Save Changes</button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal">
-    <div class="modal-content" style="max-width: 380px; text-align: center; padding: 2.5rem 2rem;">
-        <div style="width: 56px; height: 56px; background: var(--danger-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-size: 1.4rem; color: var(--danger);">✕</div>
-        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--ink);">Delete Transaction</h3>
-        <p id="deleteModalMsg" style="color: var(--ink-muted); font-size: 0.9rem; margin-bottom: 1.75rem; line-height: 1.5;"></p>
-        <div style="display: flex; gap: 0.75rem;">
-            <button type="button" onclick="closeModal('deleteModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-            <form id="deleteModalForm" method="POST" style="flex: 1;">
-                <button type="submit" class="btn-danger" style="width: 100%;">Yes, Delete</button>
-            </form>
-        </div>
+  <div class="modal-content modal-sm">
+    <div class="modal-header" style="border-bottom:none;padding-bottom:0">
+      <button class="close-btn" onclick="closeModal('deleteModal')">&times;</button>
     </div>
+    <div class="modal-body" style="text-align:center;padding-top:0">
+      <div style="width:52px;height:52px;background:var(--danger-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.25rem;color:var(--danger)">✕</div>
+      <h3 style="font-size:1.0625rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink)">Delete Transaction</h3>
+      <p id="deleteModalMsg" style="color:var(--ink-3);font-size:0.875rem;line-height:1.5"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" onclick="closeModal('deleteModal')" class="btn btn-ghost">Cancel</button>
+      <form id="deleteModalForm" method="POST" style="display:contents">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function closeModal(id) {
-        document.getElementById(id).style.display = 'none';
-    }
+function openModal(id) { var m=document.getElementById(id); m.style.display='flex'; setTimeout(()=>m.classList.add('open'),10); }
+function closeModal(id) { var m=document.getElementById(id); m.classList.remove('open'); setTimeout(()=>m.style.display='none',280); }
+function openDeleteModal(btn) {
+  document.getElementById('deleteModalMsg').textContent = btn.dataset.msg;
+  document.getElementById('deleteModalForm').action = btn.dataset.url;
+  openModal('deleteModal');
+}
+function openExpenseModal(id, date, catId, amount, desc) {
+  document.getElementById('hist_exp_date').value = date;
+  document.getElementById('hist_exp_category').value = catId;
+  document.getElementById('hist_exp_amount').value = amount;
+  document.getElementById('hist_exp_desc').value = (desc === null || desc === 'None') ? '' : desc;
+  document.getElementById('editExpenseForm').action = '/expenses/'+id+'/edit';
+  openModal('editExpenseModal');
+}
+function openIncomeModal(id, date, amount, desc) {
+  document.getElementById('hist_inc_date').value = date;
+  document.getElementById('hist_inc_amount').value = amount;
+  document.getElementById('hist_inc_desc').value = desc || '';
+  document.getElementById('editIncomeForm').action = '/incomes/'+id+'/edit';
+  openModal('editIncomeModal');
+}
+window.addEventListener('click', function(e) {
+  ['editExpenseModal','editIncomeModal','deleteModal'].forEach(function(id) {
+    if (e.target === document.getElementById(id)) closeModal(id);
+  });
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') ['editExpenseModal','editIncomeModal','deleteModal'].forEach(closeModal);
+});
 
-    function openExpenseModal(id, date, catId, amount, desc) {
-        document.getElementById('hist_exp_date').value = date;
-        document.getElementById('hist_exp_category').value = catId;
-        document.getElementById('hist_exp_amount').value = amount;
-        document.getElementById('hist_exp_desc').value = (desc === null || desc === 'None') ? '' : desc;
-        document.getElementById('editExpenseForm').action = '/expenses/' + id + '/edit';
-        document.getElementById('editExpenseModal').style.display = 'block';
-    }
-
-    function openIncomeModal(id, date, amount, desc) {
-        document.getElementById('hist_inc_date').value = date;
-        document.getElementById('hist_inc_amount').value = amount;
-        document.getElementById('hist_inc_desc').value = desc || '';
-        document.getElementById('editIncomeForm').action = '/incomes/' + id + '/edit';
-        document.getElementById('editIncomeModal').style.display = 'block';
-    }
-
-    function openDeleteModal(btn) {
-        document.getElementById('deleteModalMsg').textContent = btn.getAttribute('data-msg');
-        document.getElementById('deleteModalForm').action = btn.getAttribute('data-url');
-        document.getElementById('deleteModal').style.display = 'block';
-    }
-
-    window.onclick = function(event) {
-        ['editExpenseModal', 'editIncomeModal', 'deleteModal'].forEach(function(id) {
-            if (event.target == document.getElementById(id)) closeModal(id);
-        });
-    }
+/* Live search */
+var searchInput = document.getElementById('txnSearch');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    var rows = document.querySelectorAll('.dash-table tbody tr');
+    rows.forEach(function(row) {
+      if (!row.querySelector('td')) return;
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
 </script>
 {% endblock %}

@@ -1,92 +1,241 @@
 {% extends "base.html" %}
 
-{% block title %}Spendly — Track Every Rupee{% endblock %}
+{% block title %}Spendly — Smart Finance Tracker{% endblock %}
 
 {% block content %}
 
-<section class="hero">
-    <div class="hero-inner">
-        <div class="hero-badge">Personal Finance Tracker</div>
-        <h1 class="hero-title">
-            Know where your<br>
-            <em>money goes</em>
-        </h1>
-        <p class="hero-subtitle">
-            Log expenses, understand your spending patterns,
-            and take control of your financial life —
-            one transaction at a time.
-        </p>
-        <div class="hero-actions">
-            <a href="{{ url_for('auth.register') }}" class="btn-primary">Start tracking free</a>
-            <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign in</a>
+{# ══ HERO ══ #}
+<section class="lp-hero">
+  <div class="lp-hero-glow lp-glow-1"></div>
+  <div class="lp-hero-glow lp-glow-2"></div>
+
+  <div class="lp-hero-inner">
+
+    {# Left column — text #}
+    <div class="lp-hero-text">
+      <div class="lp-badge">
+        <span class="lp-badge-dot"></span>
+        Personal Finance Tracker
+      </div>
+
+      <h1 class="lp-title">
+        Track every taka.<br>
+        <span class="lp-title-accent">Own your future.</span>
+      </h1>
+
+      <p class="lp-subtitle">
+        Log expenses, track income, set savings goals, and understand your spending patterns —
+        all in one beautiful, fast dashboard.
+      </p>
+
+      <div class="lp-actions">
+        <a href="{{ url_for('auth.register') }}" class="lp-btn-primary">
+          Start tracking free
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="7" x2="12" y2="7"/><polyline points="8,3 12,7 8,11"/></svg>
+        </a>
+        <a href="{{ url_for('auth.login') }}" class="lp-btn-ghost">Sign in →</a>
+      </div>
+
+      <div class="lp-trust">
+        <div class="lp-trust-item">
+          <span class="lp-trust-icon">✓</span>
+          <span>100% Free</span>
         </div>
-    </div>
-    <div class="hero-visual">
-        <div class="mock-card">
-            <div class="mock-card-header">
-                <span class="mock-label">March 2026</span>
-                <span class="mock-total">₹12,450</span>
-            </div>
-            <div class="mock-bars">
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Bills</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar" style="width: 72%"></div>
-                    </div>
-                    <span class="mock-amt">₹4,500</span>
-                </div>
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Food</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-2" style="width: 52%"></div>
-                    </div>
-                    <span class="mock-amt">₹3,200</span>
-                </div>
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Health</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-3" style="width: 33%"></div>
-                    </div>
-                    <span class="mock-amt">₹2,050</span>
-                </div>
-                <div class="mock-bar-row">
-                    <span class="mock-cat">Transport</span>
-                    <div class="mock-bar-track">
-                        <div class="mock-bar mock-bar-4" style="width: 28%"></div>
-                    </div>
-                    <span class="mock-amt">₹1,800</span>
-                </div>
-            </div>
+        <span class="lp-trust-sep">·</span>
+        <div class="lp-trust-item">
+          <span class="lp-trust-icon">✓</span>
+          <span>BDT (৳) Support</span>
         </div>
+        <span class="lp-trust-sep">·</span>
+        <div class="lp-trust-item">
+          <span class="lp-trust-icon">✓</span>
+          <span>No ads, ever</span>
+        </div>
+      </div>
     </div>
+
+    {# Right column — mock dashboard #}
+    <div class="lp-hero-visual">
+      <div class="lp-mock-window">
+        <div class="lp-mock-topbar">
+          <span class="lp-mock-dots">
+            <span></span><span></span><span></span>
+          </span>
+          <span class="lp-mock-url">spendly / dashboard</span>
+          <span></span>
+        </div>
+        <div class="lp-mock-body">
+
+          <div class="lp-mock-stat-row">
+            <div class="lp-mock-stat s-dark">
+              <div class="lp-mock-stat-label">Balance</div>
+              <div class="lp-mock-stat-val">৳42,800</div>
+            </div>
+            <div class="lp-mock-stat s-success">
+              <div class="lp-mock-stat-label">Income</div>
+              <div class="lp-mock-stat-val">৳18,000</div>
+            </div>
+            <div class="lp-mock-stat s-danger">
+              <div class="lp-mock-stat-label">Spent</div>
+              <div class="lp-mock-stat-val">৳9,450</div>
+            </div>
+          </div>
+
+          <div class="lp-mock-section-header">
+            <span>Category Spending</span>
+            <span class="lp-mock-month">May 2026</span>
+          </div>
+
+          <div class="lp-mock-bars">
+            <div class="lp-mock-bar-row">
+              <span>🍔 Food</span>
+              <div class="lp-mock-track"><div class="lp-mock-fill lp-f1" style="width:72%"></div></div>
+              <span>৳3,200</span>
+            </div>
+            <div class="lp-mock-bar-row">
+              <span>🏠 Rent</span>
+              <div class="lp-mock-track"><div class="lp-mock-fill lp-f2" style="width:55%"></div></div>
+              <span>৳4,500</span>
+            </div>
+            <div class="lp-mock-bar-row">
+              <span>🚌 Transport</span>
+              <div class="lp-mock-track"><div class="lp-mock-fill lp-f3" style="width:28%"></div></div>
+              <span>৳850</span>
+            </div>
+          </div>
+
+          <div class="lp-mock-health">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span class="lp-mock-hlabel">Financial Health</span>
+              <span class="lp-mock-hval">82<span>/100</span></span>
+            </div>
+            <div class="lp-mock-hbar"><div style="width:82%;background:linear-gradient(90deg,#15803d,#16a34a)"></div></div>
+          </div>
+
+        </div>
+      </div>
+
+      {# Floating badge #}
+      <div class="lp-float-badge lp-float-1">
+        <span>📈</span>
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:#15803d">+৳8,550</div>
+          <div style="font-size:0.6rem;color:#a8a29e">saved this month</div>
+        </div>
+      </div>
+      <div class="lp-float-badge lp-float-2">
+        <span>🎯</span>
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:#c96a28">Goal: 68%</div>
+          <div style="font-size:0.6rem;color:#a8a29e">New Laptop</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </section>
 
-<section class="features">
-    <div class="features-inner">
-        <div class="feature-card">
-            <div class="feature-icon">₹</div>
-            <h3 class="feature-title">Log expenses instantly</h3>
-            <p class="feature-body">Add any expense in seconds. Category, amount, date, description — all in one simple form.</p>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">◎</div>
-            <h3 class="feature-title">Understand your patterns</h3>
-            <p class="feature-body">See exactly where your money goes with category breakdowns and monthly summaries.</p>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">◷</div>
-            <h3 class="feature-title">Filter by time period</h3>
-            <p class="feature-body">View your spending for any date range — last week, last month, or a custom period.</p>
-        </div>
+{# ══ STATS STRIP ══ #}
+<section class="lp-stats-strip">
+  <div class="lp-stats-inner">
+    <div class="lp-strip-stat">
+      <span class="lp-strip-num">৳</span>
+      <span class="lp-strip-label">BDT currency support</span>
     </div>
+    <div class="lp-strip-divider"></div>
+    <div class="lp-strip-stat">
+      <span class="lp-strip-num">6+</span>
+      <span class="lp-strip-label">Smart features</span>
+    </div>
+    <div class="lp-strip-divider"></div>
+    <div class="lp-strip-stat">
+      <span class="lp-strip-num">100%</span>
+      <span class="lp-strip-label">Free forever</span>
+    </div>
+    <div class="lp-strip-divider"></div>
+    <div class="lp-strip-stat">
+      <span class="lp-strip-num">0</span>
+      <span class="lp-strip-label">Ads or tracking</span>
+    </div>
+  </div>
 </section>
 
-<section class="cta-section">
-    <div class="cta-inner">
-        <h2 class="cta-title">Ready to take control?</h2>
-        <p class="cta-body">Join thousands of people who track their expenses with Spendly.</p>
-        <a href="{{ url_for('auth.register') }}" class="btn-primary">Create free account</a>
+{# ══ FEATURES ══ #}
+<section class="lp-features">
+  <div class="lp-features-inner">
+    <div class="lp-section-eyebrow">Everything you need</div>
+    <h2 class="lp-section-title">Finance tracking,<br><span class="lp-title-accent">done right</span></h2>
+    <p class="lp-section-subtitle">Built for real people managing real money. No spreadsheets, no complexity.</p>
+
+    <div class="lp-feat-grid">
+
+      <div class="lp-feat-card">
+        <div class="lp-feat-icon" style="background:var(--grad-accent)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h16M2 6h16M2 14h10"/></svg>
+        </div>
+        <h3 class="lp-feat-title">Transaction History</h3>
+        <p class="lp-feat-body">Filter by month, category, or type. Search and find any transaction instantly with live search.</p>
+      </div>
+
+      <div class="lp-feat-card">
+        <div class="lp-feat-icon" style="background:var(--grad-emerald)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,14 7,8 11,11 18,4"/><polyline points="14,4 18,4 18,8"/></svg>
+        </div>
+        <h3 class="lp-feat-title">Analytics & Charts</h3>
+        <p class="lp-feat-body">6-month income vs expense trend chart. Category breakdowns with visual spending bars.</p>
+      </div>
+
+      <div class="lp-feat-card">
+        <div class="lp-feat-icon" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><line x1="10" y1="1" x2="10" y2="5"/><line x1="10" y1="15" x2="10" y2="19"/></svg>
+        </div>
+        <h3 class="lp-feat-title">Savings Goals</h3>
+        <p class="lp-feat-body">Create savings targets with deadlines. Track contributions and watch your progress grow.</p>
+      </div>
+
+      <div class="lp-feat-card">
+        <div class="lp-feat-icon" style="background:var(--grad-rose)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="4" width="16" height="13" rx="2"/><path d="M2 8h16"/><circle cx="7" cy="12" r="1.5" fill="white"/></svg>
+        </div>
+        <h3 class="lp-feat-title">Budget Control</h3>
+        <p class="lp-feat-body">Set monthly budgets — overall or per category. Get alerts when you're nearing your limit.</p>
+      </div>
+
+      <div class="lp-feat-card">
+        <div class="lp-feat-icon" style="background:var(--grad-blue)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><path d="M4 16l4-4 3 3 5-6"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg>
+        </div>
+        <h3 class="lp-feat-title">Health Score</h3>
+        <p class="lp-feat-body">Get a 0–100 Financial Health Score based on your savings rate, budget usage, and consistency.</p>
+      </div>
+
+      <div class="lp-feat-card">
+        <div class="lp-feat-icon" style="background:var(--grad-teal)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><path d="M4 8l4 4 4-4M4 12l4 4 4-4"/><path d="M2 18h16"/></svg>
+        </div>
+        <h3 class="lp-feat-title">CSV Export</h3>
+        <p class="lp-feat-body">Download your full transaction history as a CSV file. Your data, always accessible.</p>
+      </div>
+
     </div>
+  </div>
+</section>
+
+{# ══ CTA ══ #}
+<section class="lp-cta">
+  <div class="lp-cta-glow"></div>
+  <div class="lp-cta-inner">
+    <div class="lp-cta-badge">Free forever · No credit card</div>
+    <h2 class="lp-cta-title">Ready to take control<br>of your finances?</h2>
+    <p class="lp-cta-sub">Join people who track their money with Spendly every day.</p>
+    <div class="lp-cta-actions">
+      <a href="{{ url_for('auth.register') }}" class="lp-btn-primary lp-btn-lg">
+        Create free account
+        <svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="7" x2="12" y2="7"/><polyline points="8,3 12,7 8,11"/></svg>
+      </a>
+      <a href="{{ url_for('auth.login') }}" class="lp-cta-signin">Already have an account? Sign in →</a>
+    </div>
+  </div>
 </section>
 
 {% endblock %}

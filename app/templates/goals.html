@@ -1,318 +1,243 @@
 {% extends "base.html" %}
-
-{% block title %}Savings Goals — Spendly{% endblock %}
-
-{% block head %}
-<style>
-    .goal-card {
-        background: var(--paper-card);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 1.75rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1.25rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .goal-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-    }
-    .goal-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        background: var(--paper-warm);
-        padding: 0.3rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: var(--ink-muted);
-    }
-    .goal-badge.deadline-set {
-        background: var(--accent-light);
-        color: var(--accent);
-    }
-    .goal-amount {
-        font-family: var(--font-display);
-        font-size: 2.2rem;
-        color: var(--ink);
-        line-height: 1;
-    }
-    .goal-progress-bg {
-        height: 10px;
-        background: var(--border-soft);
-        border-radius: 5px;
-        overflow: hidden;
-        margin-bottom: 0.35rem;
-    }
-    .goal-progress-fill {
-        height: 100%;
-        transition: width 0.8s cubic-bezier(0.1, 0.9, 0.2, 1);
-        border-radius: 5px;
-    }
-    .fund-history-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.85rem;
-        padding: 0.4rem 0.75rem;
-        background: var(--paper);
-        border-radius: 8px;
-        transition: background 0.2s;
-    }
-    .fund-history-item:hover {
-        background: var(--paper-warm);
-    }
-</style>
-{% endblock %}
+{% block title %}Goals — Spendly{% endblock %}
 
 {% block content %}
-<div class="dash-wrapper">
-    <div class="dash-container">
-        <header class="dash-header">
-            <div class="header-left">
-                <h1 class="dash-title">Savings Goals</h1>
-                <p class="text-secondary">Track and allocate funds for your specific targets.</p>
-            </div>
-            <div class="header-right">
-                <button class="btn-success" onclick="openModal('addGoalModal')">+ New Goal</button>
-            </div>
-        </header>
 
-        {% if monthly_budget > 0 %}
-        <div style="background: var(--paper-card); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
-                <span style="font-weight: 500;">Overall Monthly Budget</span>
-                <span style="color: var(--ink-muted);">৳{{ "%.2f"|format(cm_expense|default(0)) }} / ৳{{ "%.2f"|format(monthly_budget) }}</span>
-            </div>
-            <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
-                <div style="width: {{ budget_used_percent }}%; height: 100%; background: {% if budget_used_percent > 90 %}var(--danger){% elif budget_used_percent > 75 %}var(--warning){% else %}var(--primary){% endif %}; transition: width 0.8s ease-out;"></div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Goals List -->
-        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-            {% for goal in goals %}
-            <div class="goal-card">
-
-                <!-- Top row: name + actions -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
-                    <div>
-                        <p style="font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; line-height: 1.2;">{{ goal.name }}</p>
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                            {% if goal.created_at %}
-                            <span class="goal-badge">📅 Crafted: {{ goal.created_at|format_date }}</span>
-                            {% endif %}
-                            {% if goal.deadline %}
-                            <span class="goal-badge deadline-set">🎯 Target: {{ goal.deadline }}</span>
-                            {% else %}
-                            <span class="goal-badge">🎯 No deadline</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
-                        <button class="action-btn edit-btn" style="background: var(--paper-warm);"
-                            data-id="{{ goal.id }}"
-                            data-name="{{ goal.name }}"
-                            data-target="{{ goal.target_amount }}"
-                            data-deadline="{{ goal.deadline or '' }}"
-                            onclick="openEditGoalModal(this)">✏ Edit</button>
-                        <button class="action-btn delete-btn" style="background: var(--danger-light); color: var(--danger);"
-                            data-url="{{ url_for('goals.delete_goal', id=goal.id) }}"
-                            data-msg="Delete goal &quot;{{ goal.name }}&quot; permanently? All fund history will also be deleted."
-                            onclick="openDeleteModal(this)">✕ Delete</button>
-                    </div>
-                </div>
-
-                <!-- Progress section -->
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
-                        <h2 class="goal-amount">৳{{ "%.2f"|format(goal.current_amount) }}</h2>
-                        <span style="color: var(--ink-muted); font-size: 0.95rem; font-weight: 500;">of ৳{{ "%.2f"|format(goal.target_amount) }}</span>
-                    </div>
-                    <div class="goal-progress-bg">
-                        <div class="goal-progress-fill" style="width: {{ goal.progress }}%; background: {% if goal.progress >= 100 %}var(--success){% elif goal.progress >= 75 %}var(--warning){% else %}var(--primary){% endif %};"></div>
-                    </div>
-                    <p style="font-size: 0.85rem; font-weight: 500; color: var(--ink-soft); text-align: right;">{{ "%.1f"|format(goal.progress) }}% complete</p>
-                </div>
-
-                <!-- Fund History -->
-                {% if goal.fund_history %}
-                <div style="border-top: 1px dashed var(--border); padding-top: 1rem;">
-                    <p style="font-size: 0.75rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem;">Recent Contributions</p>
-                    <div style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 160px; overflow-y: auto; padding-right: 0.5rem;">
-                        {% for f in goal.fund_history %}
-                        <div class="fund-history-item">
-                            <span style="color: var(--ink-soft); font-weight: 500;">{{ f.added_at|format_date }}</span>
-                            <span style="font-weight: 600; color: var(--success);">+ ৳{{ "%.2f"|format(f.amount) }}</span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% else %}
-                <div style="border-top: 1px dashed var(--border); padding-top: 1rem;">
-                    <p style="font-size: 0.85rem; font-style: italic; color: var(--ink-muted);">Ready to start saving? Make your first contribution!</p>
-                </div>
-                {% endif %}
-
-                <!-- Footer: add funds or goal reached -->
-                <div style="padding-top: 0.5rem; display: flex; justify-content: {% if goal.progress >= 100 %}center{% else %}flex-end{% endif %};">
-                    {% if goal.progress >= 100 %}
-                    <div style="background: var(--accent-light); color: var(--success); padding: 0.5rem 1.5rem; border-radius: 20px; font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>🎉</span> Goal Accomplished!
-                    </div>
-                    {% else %}
-                    <button class="btn-primary" style="padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(26,71,42,0.15);"
-                        data-id="{{ goal.id }}"
-                        data-name="{{ goal.name }}"
-                        onclick="openAddFundsModal(this)">+ Add Funds</button>
-                    {% endif %}
-                </div>
-
-            </div>
-            {% else %}
-            <div style="background: var(--paper-card); border: 1px solid var(--border); border-radius: 14px; padding: 4rem 2rem; text-align: center;">
-                <p style="font-size: 2rem; margin-bottom: 0.75rem;">🎯</p>
-                <p style="color: var(--ink-muted); margin-bottom: 1rem;">You haven't set any savings goals yet.</p>
-                <button class="btn-primary" onclick="openModal('addGoalModal')">Create Your First Goal</button>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
+<div class="page-header">
+  <div class="page-header-left">
+    <p class="page-eyebrow">Savings & targets</p>
+    <h1 class="page-title">Goals</h1>
+  </div>
+  <div class="page-header-right">
+    <button class="btn btn-primary btn-sm" onclick="openModal('addGoalModal')">+ New Goal</button>
+  </div>
 </div>
 
-<!-- Add Goal Modal -->
+{% if monthly_budget > 0 %}
+<div class="budget-section" style="margin-bottom:1.5rem">
+  <div class="budget-header">
+    <span class="budget-title">Monthly Budget</span>
+    <span class="budget-amounts">৳{{ "%.0f"|format(cm_expense|default(0)) }} / ৳{{ "%.0f"|format(monthly_budget) }}</span>
+  </div>
+  <div class="progress-bar-bg" style="height:6px">
+    <div class="progress-fill {% if budget_used_percent > 90 %}p-danger{% elif budget_used_percent > 75 %}p-warning{% else %}p-success{% endif %}"
+         style="width:{{ budget_used_percent }}%"></div>
+  </div>
+</div>
+{% endif %}
+
+{# Goals grid #}
+<div class="goals-grid">
+  {% for goal in goals %}
+  <div class="goal-card">
+
+    {# Header row #}
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">
+      <div>
+        <p class="goal-name">{{ goal.name }}</p>
+        <div style="display:flex;gap:0.375rem;flex-wrap:wrap;margin-top:0.4rem">
+          {% if goal.created_at %}
+          <span class="goal-badge">📅 {{ goal.created_at|format_date }}</span>
+          {% endif %}
+          {% if goal.deadline %}
+          <span class="goal-badge has-deadline">🎯 Due: {{ goal.deadline }}</span>
+          {% else %}
+          <span class="goal-badge">🎯 No deadline</span>
+          {% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:0.4rem;flex-shrink:0">
+        <button class="action-btn edit-btn"
+          data-id="{{ goal.id }}"
+          data-name="{{ goal.name }}"
+          data-target="{{ goal.target_amount }}"
+          data-deadline="{{ goal.deadline or '' }}"
+          onclick="openEditGoalModal(this)">✏ Edit</button>
+        <button class="action-btn delete-btn"
+          data-url="{{ url_for('goals.delete_goal', id=goal.id) }}"
+          data-msg="Delete goal &quot;{{ goal.name }}&quot;? All contributions will be lost."
+          onclick="openDeleteModal(this)">✕</button>
+      </div>
+    </div>
+
+    {# Progress #}
+    <div>
+      <div class="goal-amount-row">
+        <span class="goal-current">৳{{ "%.0f"|format(goal.current_amount) }}</span>
+        <span class="goal-target">of ৳{{ "%.0f"|format(goal.target_amount) }}</span>
+      </div>
+      <div class="goal-progress-bg" style="margin-top:0.75rem">
+        <div class="goal-progress-fill"
+             style="width:{{ goal.progress }}%;
+                    background:{% if goal.progress >= 100 %}var(--grad-emerald){% elif goal.progress >= 65 %}var(--grad-accent){% else %}linear-gradient(90deg,#c96a28,#d97706){% endif %}">
+        </div>
+      </div>
+      <p class="goal-pct">{{ "%.1f"|format(goal.progress) }}%</p>
+    </div>
+
+    {# Fund history #}
+    {% if goal.fund_history %}
+    <div class="fund-history">
+      <p class="fund-history-label">Contributions</p>
+      <div class="fund-history-scroll">
+        {% for f in goal.fund_history %}
+        <div class="fund-item">
+          <span class="fund-date">{{ f.added_at|format_date }}</span>
+          <span class="fund-amount">+ ৳{{ "%.2f"|format(f.amount) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="fund-history">
+      <p style="font-size:0.8125rem;color:var(--ink-3);font-style:italic">No contributions yet. Make your first one!</p>
+    </div>
+    {% endif %}
+
+    {# Footer #}
+    <div style="padding-top:0.25rem;display:flex;justify-content:{% if goal.progress >= 100 %}center{% else %}flex-end{% endif %}">
+      {% if goal.progress >= 100 %}
+      <div class="goal-accomplished">🎉 Goal Accomplished!</div>
+      {% else %}
+      <button class="btn btn-primary btn-sm"
+        data-id="{{ goal.id }}"
+        data-name="{{ goal.name }}"
+        onclick="openAddFundsModal(this)">+ Add Funds</button>
+      {% endif %}
+    </div>
+
+  </div>
+  {% else %}
+  <div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:4rem 2rem;text-align:center">
+    <p style="font-size:2rem;margin-bottom:0.75rem">🎯</p>
+    <p style="color:var(--ink-3);margin-bottom:1rem;font-size:0.9375rem">You haven't set any savings goals yet.</p>
+    <button class="btn btn-primary" onclick="openModal('addGoalModal')">Create Your First Goal</button>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── MODALS ── #}
+
 <div id="addGoalModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('addGoalModal')">&times;</span>
-        <h3 class="card-title">Create a New Goal</h3>
-        <form method="POST" action="{{ url_for('goals.add_goal') }}" class="dash-form">
-            <div class="form-group">
-                <label>Goal Name</label>
-                <input type="text" name="name" class="form-input" placeholder="e.g. New Laptop" required>
-            </div>
-            <div class="form-group">
-                <label>Target Amount (৳)</label>
-                <input type="number" step="0.01" name="target_amount" class="form-input" placeholder="e.g. 50000" required>
-            </div>
-            <div class="form-group">
-                <label>Target Date (Optional)</label>
-                <input type="date" name="deadline" class="form-input">
-            </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
-                <button type="button" onclick="closeModal('addGoalModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-                <button type="submit" class="btn-primary" style="flex: 1;">Create Goal</button>
-            </div>
-        </form>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">New Savings Goal</h3>
+      <button class="close-btn" onclick="closeModal('addGoalModal')">&times;</button>
     </div>
+    <form method="POST" action="{{ url_for('goals.add_goal') }}">
+      <div class="modal-body">
+        <div class="form-group"><label>Goal Name</label>
+          <input type="text" name="name" class="form-input" placeholder="e.g. New Laptop, Emergency Fund" required></div>
+        <div class="form-group"><label>Target Amount (৳)</label>
+          <input type="number" step="0.01" name="target_amount" class="form-input" placeholder="e.g. 50000" required></div>
+        <div class="form-group"><label>Target Date <span style="color:var(--ink-4);font-weight:400">(optional)</span></label>
+          <input type="date" name="deadline" class="form-input"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('addGoalModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Goal</button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<!-- Edit Goal Modal -->
 <div id="editGoalModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('editGoalModal')">&times;</span>
-        <h3 class="card-title">Edit Goal</h3>
-        <form id="editGoalForm" method="POST" class="dash-form">
-            <div class="form-group">
-                <label>Goal Name</label>
-                <input type="text" id="edit_goal_name" name="name" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Target Amount (৳)</label>
-                <input type="number" step="0.01" id="edit_goal_target" name="target_amount" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label>Target Date (Optional)</label>
-                <input type="date" id="edit_goal_deadline" name="deadline" class="form-input">
-            </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
-                <button type="button" onclick="closeModal('editGoalModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-                <button type="submit" class="btn-primary" style="flex: 1;">Save Changes</button>
-            </div>
-        </form>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Goal</h3>
+      <button class="close-btn" onclick="closeModal('editGoalModal')">&times;</button>
     </div>
+    <form id="editGoalForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group"><label>Goal Name</label>
+          <input type="text" id="edit_goal_name" name="name" class="form-input" required></div>
+        <div class="form-group"><label>Target Amount (৳)</label>
+          <input type="number" step="0.01" id="edit_goal_target" name="target_amount" class="form-input" required></div>
+        <div class="form-group"><label>Target Date <span style="color:var(--ink-4);font-weight:400">(optional)</span></label>
+          <input type="date" id="edit_goal_deadline" name="deadline" class="form-input"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('editGoalModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<!-- Add Funds Modal -->
 <div id="addFundsModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('addFundsModal')">&times;</span>
-        <h3 class="card-title">Add Funds to <span id="add_funds_goal_name" style="color: var(--primary);"></span></h3>
-        <form id="addFundsForm" method="POST" class="dash-form">
-            <div class="form-group">
-                <label>Amount to Add (৳)</label>
-                <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 500" required min="0.01">
-            </div>
-            <p style="font-size: 0.85rem; color: var(--ink-muted); margin-bottom: 1rem; line-height: 1.5;">This records progress toward your goal. It doesn't deduct from your actual balance.</p>
-            <div style="display: flex; gap: 0.75rem;">
-                <button type="button" onclick="closeModal('addFundsModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-                <button type="submit" class="btn-success" style="flex: 1;">Add Funds</button>
-            </div>
-        </form>
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Add Funds</h3>
+        <p style="font-size:0.8125rem;color:var(--ink-3);margin-top:2px">Goal: <span id="add_funds_goal_name" style="color:var(--accent);font-weight:600"></span></p>
+      </div>
+      <button class="close-btn" onclick="closeModal('addFundsModal')">&times;</button>
     </div>
+    <form id="addFundsForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group"><label>Amount (৳)</label>
+          <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 500" required min="0.01"></div>
+        <p style="font-size:0.8125rem;color:var(--ink-3);line-height:1.5;background:var(--accent-light);border:1px solid var(--accent-border);border-radius:8px;padding:0.625rem 0.75rem">
+          Records progress toward your goal. Does not deduct from your balance.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('addFundsModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-success">Add Funds</button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal">
-    <div class="modal-content" style="max-width: 380px; text-align: center; padding: 2.5rem 2rem;">
-        <div style="width: 56px; height: 56px; background: var(--danger-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-size: 1.4rem; color: var(--danger);">✕</div>
-        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--ink);">Delete Goal</h3>
-        <p id="deleteModalMsg" style="color: var(--ink-muted); font-size: 0.9rem; margin-bottom: 1.75rem; line-height: 1.5;"></p>
-        <div style="display: flex; gap: 0.75rem;">
-            <button type="button" onclick="closeModal('deleteModal')" class="btn-ghost" style="flex: 1; font-family: var(--font-body); cursor: pointer;">Cancel</button>
-            <form id="deleteModalForm" method="POST" style="flex: 1;">
-                <button type="submit" class="btn-danger" style="width: 100%;">Yes, Delete</button>
-            </form>
-        </div>
+  <div class="modal-content modal-sm">
+    <div class="modal-header" style="border-bottom:none;padding-bottom:0">
+      <button class="close-btn" onclick="closeModal('deleteModal')">&times;</button>
     </div>
+    <div class="modal-body" style="text-align:center;padding-top:0">
+      <div style="width:52px;height:52px;background:var(--danger-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.25rem;color:var(--danger)">✕</div>
+      <h3 style="font-size:1.0625rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink)">Delete Goal</h3>
+      <p id="deleteModalMsg" style="color:var(--ink-3);font-size:0.875rem;line-height:1.5"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" onclick="closeModal('deleteModal')" class="btn btn-ghost">Cancel</button>
+      <form id="deleteModalForm" method="POST" style="display:contents">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function openModal(id) {
-        document.getElementById(id).style.display = 'block';
-    }
-
-    function closeModal(id) {
-        document.getElementById(id).style.display = 'none';
-    }
-
-    function openAddFundsModal(btn) {
-        const id = btn.getAttribute('data-id');
-        const name = btn.getAttribute('data-name');
-        document.getElementById('add_funds_goal_name').textContent = name;
-        document.getElementById('addFundsForm').action = '/goals/' + id + '/add_funds';
-        openModal('addFundsModal');
-    }
-
-    function openEditGoalModal(btn) {
-        const id = btn.getAttribute('data-id');
-        const name = btn.getAttribute('data-name');
-        const target = btn.getAttribute('data-target');
-        const deadline = btn.getAttribute('data-deadline');
-
-        document.getElementById('edit_goal_name').value = name;
-        document.getElementById('edit_goal_target').value = target;
-        document.getElementById('edit_goal_deadline').value = deadline || '';
-        document.getElementById('editGoalForm').action = '/goals/' + id + '/edit';
-        openModal('editGoalModal');
-    }
-
-    function openDeleteModal(btn) {
-        document.getElementById('deleteModalMsg').textContent = btn.getAttribute('data-msg');
-        document.getElementById('deleteModalForm').action = btn.getAttribute('data-url');
-        openModal('deleteModal');
-    }
-
-    window.onclick = function(event) {
-        ['addGoalModal', 'editGoalModal', 'addFundsModal', 'deleteModal'].forEach(function(id) {
-            if (event.target == document.getElementById(id)) closeModal(id);
-        });
-    }
+function openModal(id) { var m=document.getElementById(id); m.style.display='flex'; setTimeout(()=>m.classList.add('open'),10); }
+function closeModal(id) { var m=document.getElementById(id); m.classList.remove('open'); setTimeout(()=>m.style.display='none',280); }
+function openAddFundsModal(btn) {
+  document.getElementById('add_funds_goal_name').textContent = btn.dataset.name;
+  document.getElementById('addFundsForm').action = '/goals/'+btn.dataset.id+'/add_funds';
+  openModal('addFundsModal');
+}
+function openEditGoalModal(btn) {
+  document.getElementById('edit_goal_name').value = btn.dataset.name;
+  document.getElementById('edit_goal_target').value = btn.dataset.target;
+  document.getElementById('edit_goal_deadline').value = btn.dataset.deadline || '';
+  document.getElementById('editGoalForm').action = '/goals/'+btn.dataset.id+'/edit';
+  openModal('editGoalModal');
+}
+function openDeleteModal(btn) {
+  document.getElementById('deleteModalMsg').textContent = btn.dataset.msg;
+  document.getElementById('deleteModalForm').action = btn.dataset.url;
+  openModal('deleteModal');
+}
+window.addEventListener('click', function(e) {
+  ['addGoalModal','editGoalModal','addFundsModal','deleteModal'].forEach(function(id) {
+    if (e.target === document.getElementById(id)) closeModal(id);
+  });
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') ['addGoalModal','editGoalModal','addFundsModal','deleteModal'].forEach(closeModal);
+});
 </script>
 {% endblock %}

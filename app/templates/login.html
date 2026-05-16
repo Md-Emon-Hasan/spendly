@@ -1,45 +1,45 @@
 {% extends "base.html" %}
-
 {% block title %}Sign in — Spendly{% endblock %}
 
 {% block content %}
+<div class="auth-page">
+  <div class="auth-container">
 
-<section class="auth-section">
-    <div class="auth-container">
+    <a href="{{ url_for('landing') }}" class="auth-logo">
+      <span class="auth-logo-icon-wrap">◈</span>
+      <span class="auth-logo-name">Spendly</span>
+    </a>
 
-        <div class="auth-header">
-            <h1 class="auth-title">Welcome back</h1>
-            <p class="auth-subtitle">Sign in to your Spendly account</p>
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 class="auth-title">Welcome back</h1>
+        <p class="auth-subtitle">Sign in to continue tracking your finances</p>
+      </div>
+
+      {% if error %}
+      <div class="auth-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="/login">
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" class="form-input"
+                 placeholder="you@example.com" required autofocus>
         </div>
-
-        <div class="auth-card">
-            {% if error %}
-            <div class="auth-error">{{ error }}</div>
-            {% endif %}
-
-            <form method="POST" action="/login">
-                <div class="form-group">
-                    <label for="email">Email address</label>
-                    <input type="email" id="email" name="email"
-                           class="form-input" placeholder="nitish@example.com"
-                           required autofocus>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password"
-                           class="form-input" placeholder="Your password"
-                           required>
-                </div>
-                <button type="submit" class="btn-submit">Sign in</button>
-            </form>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" class="form-input"
+                 placeholder="Your password" required>
         </div>
-
-        <p class="auth-switch">
-            Don't have an account?
-            <a href="{{ url_for('auth.register') }}">Create one free</a>
-        </p>
-
+        <button type="submit" class="btn-submit" style="margin-top:0.25rem">Sign in</button>
+      </form>
     </div>
-</section>
 
+    <p class="auth-switch">
+      Don't have an account?
+      <a href="{{ url_for('auth.register') }}">Create one free →</a>
+    </p>
+
+  </div>
+</div>
 {% endblock %}
