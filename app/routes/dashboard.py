@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, session, redirect, url_for
 from datetime import datetime, timedelta
 import calendar
 from ..database.connection import get_db
+from ..services import process_recurring
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -12,6 +13,7 @@ def index():
 
     uid = session["user_id"]
     conn = get_db()
+    process_recurring(conn, uid)
     now = datetime.now()
     curr_month = now.strftime("%Y-%m")
 

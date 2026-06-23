@@ -106,16 +106,69 @@ def add_funds(id):
         return redirect(url_for('auth.login'))
 
     uid = session['user_id']
-    amount = float(request.form.get('amount', 0))
+
+    try:
+        amount = float(request.form.get('amount', 0))
+    except (TypeError, ValueError):
+        amount = 0
+
+    if amount <= 0:
+        flash('Please enter an amount greater than zero.', 'error')
+        return redirect(url_for('goals.index'))
 
     conn = get_db()
     goal = conn.execute("SELECT * FROM goals WHERE id=? AND user_id=?", (id, uid)).fetchone()
-    if goal:
-        new_amt = float(goal['current_amount'] or 0) + amount
-        conn.execute("UPDATE goals SET current_amount = ? WHERE id = ?", (new_amt, id))
+    if not goal:
+        flash('Goal not found.', 'error')
+        return redirect(url_for('goals.index'))
+
+    new_amt = float(goal['current_amount'] or 0) + amount
+    conn.execute("UPDATE goals SET current_amount = ? WHERE id = ?", (new_amt, id))
+    try:
         conn.execute("INSERT INTO goal_funds (goal_id, amount) VALUES (?, ?)", (id, amount))
-        conn.commit()
-        flash(f'Added ৳{amount:.2f} to {goal["name"]}!', 'success')
+    except Exception:
+        # goal_funds is an optional history table; never let a missing/locked
+        # table block recording progress on the goal itself.
+        pass
+    conn.commit()
+    flash(f'Added ৳{amount:.2f} to {goal["name"]}!', 'success')
+    return redirect(url_for('goals.index'))
+
+
+@goals_bp.route('/goals/<int:id>/withdraw', methods=['POST'])
+def withdraw_funds(id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    uid = session['user_id']
+
+    try:
+        amount = float(request.form.get('amount', 0))
+    except (TypeError, ValueError):
+        amount = 0
+
+    if amount <= 0:
+        flash('Please enter an amount greater than zero.', 'error')
+        return redirect(url_for('goals.index'))
+
+    conn = get_db()
+    goal = conn.execute("SELECT * FROM goals WHERE id=? AND user_id=?", (id, uid)).fetchone()
+    if not goal:
+        flash('Goal not found.', 'error')
+        return redirect(url_for('goals.index'))
+
+    current = float(goal['current_amount'] or 0)
+    if amount > current:
+        amount = current  # never go below zero
+
+    new_amt = current - amount
+    conn.execute("UPDATE goals SET current_amount = ? WHERE id = ?", (new_amt, id))
+    try:
+        conn.execute("INSERT INTO goal_funds (goal_id, amount) VALUES (?, ?)", (id, -amount))
+    except Exception:
+        pass
+    conn.commit()
+    flash(f'Withdrew ৳{amount:.2f} from {goal["name"]}.', 'info')
     return redirect(url_for('goals.index'))
 
 

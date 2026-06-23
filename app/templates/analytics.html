@@ -58,25 +58,80 @@
   </div>
 </div>
 
-{# 6-Month Trend Chart + Category Breakdown #}
+{# Trend area charts — 4 months + running month #}
 <div class="analytics-grid">
 
-  {# Trend chart #}
+  {# 4-Month trend (gradient area) #}
   <div class="card-full">
-    <h3 class="card-title">6-Month Trend</h3>
+    <h3 class="card-title">4-Month Trend</h3>
     <div class="chart-legend">
       <span class="legend-item"><span class="legend-dot" style="background:#10b981"></span> Income</span>
-      <span class="legend-item"><span class="legend-dot" style="background:#f43f5e"></span> Expense</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#ec4899"></span> Expense</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span> Savings</span>
     </div>
     <div class="chart-wrapper">
-      <svg id="trend-svg" class="chart-svg" viewBox="0 0 600 220" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg id="trend4-svg" class="chart-svg" viewBox="0 0 600 240" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
-    <script type="application/json" id="trend-data">{{ monthly_trend | tojson }}</script>
+    <script type="application/json" id="trend4-data">{{ trend_months | tojson }}</script>
   </div>
 
-  {# Category breakdown #}
+  {# Running-month daily trend (gradient area) #}
   <div class="card-full">
-    <h3 class="card-title">Where your money went</h3>
+    <h3 class="card-title">This Month — {{ selected_label }}</h3>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#10b981"></span> Income</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#ec4899"></span> Expense</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span> Savings</span>
+    </div>
+    <div class="chart-wrapper">
+      <svg id="trendday-svg" class="chart-svg" viewBox="0 0 600 240" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <script type="application/json" id="trendday-data">{{ trend_days | tojson }}</script>
+  </div>
+
+</div>
+
+{# Spending Split — 4 months + running month #}
+<div class="analytics-grid">
+
+  {# 4-month donut #}
+  <div class="card-full">
+    <h3 class="card-title">Spending Split — Last 4 Months</h3>
+    <p class="chart-sub">{{ range_4m_label }}</p>
+    {% if donut_4m %}
+    <div class="donut-wrap">
+      <svg id="donut4-svg" viewBox="0 0 200 200" width="180" height="180"></svg>
+      <div class="donut-legend" id="donut4-legend"></div>
+    </div>
+    <script type="application/json" id="donut4-data">{{ donut_4m | tojson }}</script>
+    {% else %}
+    <p class="empty-state">No expenses in the last 4 months.</p>
+    {% endif %}
+  </div>
+
+  {# Running-month donut #}
+  <div class="card-full">
+    <h3 class="card-title">Spending Split — {{ selected_label }}</h3>
+    <p class="chart-sub">Running month</p>
+    {% if cat_donut %}
+    <div class="donut-wrap">
+      <svg id="donut-svg" viewBox="0 0 200 200" width="180" height="180"></svg>
+      <div class="donut-legend" id="donut-legend"></div>
+    </div>
+    <script type="application/json" id="donut-data">{{ cat_donut | tojson }}</script>
+    {% else %}
+    <p class="empty-state">No expenses for this month.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+{# Category breakdown bars + Day of week #}
+<div class="analytics-grid">
+
+  {# Category breakdown (running month) #}
+  <div class="card-full">
+    <h3 class="card-title">Where your money went — {{ selected_label }}</h3>
     <div class="cat-bars-container">
       {% for cat in cat_breakdown %}
       <div class="cat-bar-row">
@@ -94,42 +149,6 @@
       {% else %}
       <p class="empty-state">No expenses for this month.</p>
       {% endfor %}
-    </div>
-  </div>
-
-</div>
-
-{# Behavioral Insights #}
-<p class="section-title" style="margin-top:0.5rem">Behavioral Insights</p>
-<div class="analytics-grid">
-
-  {# Top 3 expenses #}
-  <div class="card-full">
-    <h3 class="card-title">Top 3 Largest Expenses</h3>
-    <div class="table-responsive">
-      <table class="dash-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Details</th>
-            <th class="text-right">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for e in top_expenses %}
-          <tr>
-            <td>{{ e.date|format_date }}</td>
-            <td>
-              <strong>{{ e.icon }} {{ e.name }}</strong><br>
-              <span style="font-size:0.8125rem;color:var(--ink-3)">{{ e.description or 'No note' }}</span>
-            </td>
-            <td class="text-right amount-out">- ৳{{ "%.2f"|format(e.amount) }}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="3" class="text-center empty-state">No expenses.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
     </div>
   </div>
 
@@ -162,6 +181,37 @@
 
 </div>
 
+{# Behavioral Insights #}
+<p class="section-title" style="margin-top:0.5rem">Behavioral Insights</p>
+<div class="card-full" style="margin-bottom:1.5rem">
+  <h3 class="card-title">Top 3 Largest Expenses — {{ selected_label }}</h3>
+  <div class="table-responsive">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Details</th>
+          <th class="text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in top_expenses %}
+        <tr>
+          <td>{{ e.date|format_date }}</td>
+          <td>
+            <strong>{{ e.icon }} {{ e.name }}</strong><br>
+            <span style="font-size:0.8125rem;color:var(--ink-3)">{{ e.description or 'No note' }}</span>
+          </td>
+          <td class="text-right amount-out">- ৳{{ "%.2f"|format(e.amount) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="text-center empty-state">No expenses.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {# Lifetime Stats #}
 <p class="section-title" style="margin-top:0.5rem">Lifetime Summary</p>
 <div class="stats-grid">
@@ -187,97 +237,189 @@
 
 {% block scripts %}
 <script>
-(function() {
-  var dataEl = document.getElementById('trend-data');
-  var svg = document.getElementById('trend-svg');
-  if (!dataEl || !svg) return;
+var SVGNS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs) {
+  var e = document.createElementNS(SVGNS, tag);
+  Object.keys(attrs).forEach(function(k) { e.setAttribute(k, attrs[k]); });
+  return e;
+}
 
-  var data = JSON.parse(dataEl.textContent || '[]').reverse();
+/* ───────── GRADIENT AREA TREND CHART ─────────
+   Smooth, multi-hue gradient area waves (image-inspired) on the light Claude theme.
+   `xLabelFor(d, i, n)` decides which x-axis ticks to print. */
+function drawAreaTrend(svgId, dataId, xLabelFor) {
+  var dataEl = document.getElementById(dataId);
+  var svg = document.getElementById(svgId);
+  if (!dataEl || !svg) return;
+  var data = JSON.parse(dataEl.textContent || '[]');
   if (!data.length) {
-    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#a8a5a0" font-size="13" font-family="Inter,sans-serif">No trend data available</text>';
+    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#a8a5a0" font-size="13" font-family="Inter,sans-serif">No data available</text>';
     return;
   }
 
-  var W = 600, H = 220, padL = 52, padR = 20, padT = 16, padB = 48;
+  var W = 600, H = 240, padL = 52, padR = 18, padT = 18, padB = 42;
   var dW = W - padL - padR, dH = H - padT - padB;
   var n = data.length;
+  var uid = svgId;
 
-  var maxVal = 1;
+  var maxVal = 1, minVal = 0;
   data.forEach(function(d) {
     if (d.income > maxVal) maxVal = d.income;
     if (d.expense > maxVal) maxVal = d.expense;
+    if (d.saved > maxVal) maxVal = d.saved;
+    if (d.saved < minVal) minVal = d.saved;   // savings can be negative
   });
+  var range = maxVal - minVal || 1;
 
-  function xPos(i) { return padL + (n === 1 ? dW/2 : i / (n-1) * dW); }
-  function yPos(v) { return padT + (1 - v/maxVal) * dH; }
+  function xPos(i) { return padL + (n === 1 ? dW / 2 : i / (n - 1) * dW); }
+  function yPos(v) { return padT + (1 - (v - minVal) / range) * dH; }
+  var zeroY = yPos(0);   // baseline for area fills
 
-  var svgNS = 'http://www.w3.org/2000/svg';
-
-  function el(tag, attrs) {
-    var e = document.createElementNS(svgNS, tag);
-    Object.keys(attrs).forEach(function(k) { e.setAttribute(k, attrs[k]); });
-    return e;
+  // Gradient definitions — vibrant, image-inspired multi-hue fades.
+  var defs = svgEl('defs', {});
+  function grad(id, c1, c2) {
+    var g = svgEl('linearGradient', {id: id, x1: '0', y1: '0', x2: '0', y2: '1'});
+    g.appendChild(svgEl('stop', {offset: '0%',  'stop-color': c1, 'stop-opacity': '0.55'}));
+    g.appendChild(svgEl('stop', {offset: '55%', 'stop-color': c2, 'stop-opacity': '0.28'}));
+    g.appendChild(svgEl('stop', {offset: '100%','stop-color': c2, 'stop-opacity': '0.02'}));
+    defs.appendChild(g);
   }
+  grad(uid + '-incFill', '#34d399', '#22d3ee');   // green → teal → cyan
+  grad(uid + '-expFill', '#a855f7', '#ec4899');   // purple → pink
+  grad(uid + '-savFill', '#3b82f6', '#6366f1');   // blue → indigo
+  // Vibrant stroke gradients (left→right rainbow sweep, like the reference image)
+  var incStroke = svgEl('linearGradient', {id: uid + '-incLine', x1: '0', y1: '0', x2: '1', y2: '0'});
+  incStroke.appendChild(svgEl('stop', {offset: '0%', 'stop-color': '#10b981'}));
+  incStroke.appendChild(svgEl('stop', {offset: '100%', 'stop-color': '#06b6d4'}));
+  defs.appendChild(incStroke);
+  var expStroke = svgEl('linearGradient', {id: uid + '-expLine', x1: '0', y1: '0', x2: '1', y2: '0'});
+  expStroke.appendChild(svgEl('stop', {offset: '0%', 'stop-color': '#8b5cf6'}));
+  expStroke.appendChild(svgEl('stop', {offset: '100%', 'stop-color': '#ec4899'}));
+  defs.appendChild(expStroke);
+  var savStroke = svgEl('linearGradient', {id: uid + '-savLine', x1: '0', y1: '0', x2: '1', y2: '0'});
+  savStroke.appendChild(svgEl('stop', {offset: '0%', 'stop-color': '#3b82f6'}));
+  savStroke.appendChild(svgEl('stop', {offset: '100%', 'stop-color': '#6366f1'}));
+  defs.appendChild(savStroke);
+  svg.appendChild(defs);
 
-  // Grid lines
+  // Grid lines + y labels (scaled across the full min→max range)
   [0, 0.25, 0.5, 0.75, 1].forEach(function(t) {
-    var y = padT + (1-t) * dH;
-    svg.appendChild(el('line', {x1: padL, y1: y, x2: W-padR, y2: y, stroke: '#e5e3de', 'stroke-width': '1'}));
-    var label = Math.round(maxVal * t);
-    var txt = el('text', {x: padL - 6, y: y + 4, 'text-anchor': 'end', fill: '#a8a5a0', 'font-size': '10', 'font-family': 'Inter,sans-serif'});
-    txt.textContent = label >= 1000 ? (label/1000).toFixed(1)+'k' : label;
+    var y = padT + (1 - t) * dH;
+    svg.appendChild(svgEl('line', {x1: padL, y1: y, x2: W - padR, y2: y, stroke: '#e5e3de', 'stroke-width': '1'}));
+    var label = Math.round(minVal + range * t);
+    var txt = svgEl('text', {x: padL - 6, y: y + 4, 'text-anchor': 'end', fill: '#a8a5a0', 'font-size': '10', 'font-family': 'Inter,sans-serif'});
+    txt.textContent = Math.abs(label) >= 1000 ? (label / 1000).toFixed(1) + 'k' : label;
     svg.appendChild(txt);
   });
+  // Emphasised zero line when savings dips negative
+  if (minVal < 0) {
+    svg.appendChild(svgEl('line', {x1: padL, y1: zeroY, x2: W - padR, y2: zeroY, stroke: '#c8c4bc', 'stroke-width': '1', 'stroke-dasharray': '3 3'}));
+  }
 
-  // Build smooth polyline points
   function buildPath(arr) {
-    if (arr.length === 1) return 'M ' + xPos(0) + ' ' + yPos(arr[0]) + ' L ' + xPos(0) + ' ' + yPos(arr[0]);
+    if (arr.length === 1) return 'M ' + xPos(0) + ' ' + yPos(arr[0]);
     var d = 'M ' + xPos(0) + ' ' + yPos(arr[0]);
     for (var i = 1; i < arr.length; i++) {
-      var x0 = xPos(i-1), y0 = yPos(arr[i-1]);
+      var x0 = xPos(i - 1), y0 = yPos(arr[i - 1]);
       var x1 = xPos(i), y1 = yPos(arr[i]);
       var cpx = (x0 + x1) / 2;
       d += ' C ' + cpx + ' ' + y0 + ', ' + cpx + ' ' + y1 + ', ' + x1 + ' ' + y1;
     }
     return d;
   }
+  function buildArea(arr) {
+    return buildPath(arr) + ' L ' + xPos(arr.length - 1) + ' ' + zeroY + ' L ' + xPos(0) + ' ' + zeroY + ' Z';
+  }
 
   var incomes = data.map(function(d) { return d.income; });
   var expenses = data.map(function(d) { return d.expense; });
+  var savings = data.map(function(d) { return d.saved; });
 
-  // Area fills
-  function buildArea(arr, color) {
-    var path = buildPath(arr);
-    var lastX = xPos(arr.length-1), firstX = xPos(0), baseY = padT + dH;
-    return path + ' L ' + lastX + ' ' + baseY + ' L ' + firstX + ' ' + baseY + ' Z';
+  // Areas (expense behind, then income, then savings on top)
+  svg.appendChild(svgEl('path', {d: buildArea(expenses), fill: 'url(#' + uid + '-expFill)', stroke: 'none'}));
+  svg.appendChild(svgEl('path', {d: buildArea(incomes), fill: 'url(#' + uid + '-incFill)', stroke: 'none'}));
+  svg.appendChild(svgEl('path', {d: buildArea(savings), fill: 'url(#' + uid + '-savFill)', stroke: 'none'}));
+
+  // Stroke lines
+  svg.appendChild(svgEl('path', {d: buildPath(expenses), fill: 'none', stroke: 'url(#' + uid + '-expLine)', 'stroke-width': '2.5', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
+  svg.appendChild(svgEl('path', {d: buildPath(incomes), fill: 'none', stroke: 'url(#' + uid + '-incLine)', 'stroke-width': '2.5', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
+  svg.appendChild(svgEl('path', {d: buildPath(savings), fill: 'none', stroke: 'url(#' + uid + '-savLine)', 'stroke-width': '2.5', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
+
+  // Dots only when the series isn't too dense (e.g. 4-month chart)
+  if (n <= 12) {
+    data.forEach(function(d, i) {
+      svg.appendChild(svgEl('circle', {cx: xPos(i), cy: yPos(d.expense), r: '3.5', fill: '#fff', stroke: '#ec4899', 'stroke-width': '2'}));
+      svg.appendChild(svgEl('circle', {cx: xPos(i), cy: yPos(d.income), r: '3.5', fill: '#fff', stroke: '#10b981', 'stroke-width': '2'}));
+      svg.appendChild(svgEl('circle', {cx: xPos(i), cy: yPos(d.saved), r: '3.5', fill: '#fff', stroke: '#3b82f6', 'stroke-width': '2'}));
+    });
   }
-
-  var incomeArea = el('path', {d: buildArea(incomes), fill: 'rgba(16,185,129,0.08)', stroke: 'none'});
-  var expenseArea = el('path', {d: buildArea(expenses), fill: 'rgba(244,63,94,0.08)', stroke: 'none'});
-  svg.appendChild(incomeArea);
-  svg.appendChild(expenseArea);
-
-  // Lines
-  var incomeLine = el('path', {d: buildPath(incomes), fill: 'none', stroke: '#10b981', 'stroke-width': '2.5', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'});
-  var expenseLine = el('path', {d: buildPath(expenses), fill: 'none', stroke: '#f43f5e', 'stroke-width': '2.5', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'});
-  svg.appendChild(incomeLine);
-  svg.appendChild(expenseLine);
-
-  // Dots
-  data.forEach(function(d, i) {
-    var ix = xPos(i), iy = yPos(d.income);
-    var ex = xPos(i), ey = yPos(d.expense);
-    svg.appendChild(el('circle', {cx: ix, cy: iy, r: '4', fill: '#fff', stroke: '#10b981', 'stroke-width': '2'}));
-    svg.appendChild(el('circle', {cx: ex, cy: ey, r: '4', fill: '#fff', stroke: '#f43f5e', 'stroke-width': '2'}));
-  });
 
   // X-axis labels
   data.forEach(function(d, i) {
-    var x = xPos(i);
-    var txt = el('text', {x: x, y: H - 8, 'text-anchor': 'middle', fill: '#7a7875', 'font-size': '10', 'font-family': 'Inter,sans-serif'});
-    txt.textContent = d.label || '';
+    var lbl = xLabelFor(d, i, n);
+    if (lbl === null || lbl === undefined) return;
+    var txt = svgEl('text', {x: xPos(i), y: H - 12, 'text-anchor': 'middle', fill: '#7a7875', 'font-size': '10', 'font-family': 'Inter,sans-serif'});
+    txt.textContent = lbl;
     svg.appendChild(txt);
   });
-})();
+}
+
+// 4-month chart: label every point with the month name.
+drawAreaTrend('trend4-svg', 'trend4-data', function(d) { return d.label || ''; });
+// Running-month chart: label day 1, every 5th day, and the last day.
+drawAreaTrend('trendday-svg', 'trendday-data', function(d, i, n) {
+  if (d.day === 1 || d.day % 5 === 0 || i === n - 1) return d.day;
+  return null;
+});
+
+/* ───────── CATEGORY DONUT ───────── */
+function drawDonut(svgId, dataId, legendId) {
+  var dataEl = document.getElementById(dataId);
+  var svg = document.getElementById(svgId);
+  var legend = document.getElementById(legendId);
+  if (!dataEl || !svg) return;
+  var data = JSON.parse(dataEl.textContent || '[]');
+  if (!data.length) return;
+
+  var palette = ['#d97757', '#16a34a', '#3b82f6', '#8b5cf6', '#d97706', '#0d9488', '#db2777', '#65a30d', '#6366f1', '#a8a29e'];
+  var total = data.reduce(function(s, d) { return s + d.total; }, 0);
+  if (total <= 0) return;
+
+  var cx = 100, cy = 100, r = 72, stroke = 30;
+  var circ = 2 * Math.PI * r;
+  var offset = 0;
+
+  var bg = svgEl('circle', {cx: cx, cy: cy, r: r, fill: 'none', stroke: '#eee7df', 'stroke-width': stroke});
+  svg.appendChild(bg);
+
+  data.forEach(function(d, i) {
+    var frac = d.total / total;
+    svg.appendChild(svgEl('circle', {
+      cx: cx, cy: cy, r: r, fill: 'none',
+      stroke: palette[i % palette.length], 'stroke-width': stroke,
+      'stroke-dasharray': (frac * circ) + ' ' + circ,
+      'stroke-dashoffset': -offset,
+      transform: 'rotate(-90 ' + cx + ' ' + cy + ')'
+    }));
+    offset += frac * circ;
+    if (legend) {
+      var item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = '<span class="legend-dot" style="background:' + palette[i % palette.length] + '"></span>' +
+        '<span>' + (d.icon || '') + ' ' + d.name + ' · ' + Math.round(frac * 100) + '%</span>';
+      legend.appendChild(item);
+    }
+  });
+
+  var t1 = svgEl('text', {x: cx, y: cy - 2, 'text-anchor': 'middle', 'font-size': '13', 'font-weight': '700', fill: '#1c1917'});
+  t1.textContent = '৳' + Math.round(total).toLocaleString();
+  svg.appendChild(t1);
+  var t2 = svgEl('text', {x: cx, y: cy + 14, 'text-anchor': 'middle', 'font-size': '9', fill: '#8a857d'});
+  t2.textContent = 'total spent';
+  svg.appendChild(t2);
+}
+
+drawDonut('donut4-svg', 'donut4-data', 'donut4-legend');
+drawDonut('donut-svg', 'donut-data', 'donut-legend');
 </script>
 {% endblock %}

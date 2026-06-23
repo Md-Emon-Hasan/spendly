@@ -4,6 +4,26 @@ from ..database.connection import get_db
 
 transactions_bp = Blueprint('transactions', __name__)
 
+
+def _apply_range(query, params, date_col, filter_month, date_from, date_to, amt_min, amt_max):
+    """Append shared month / date-range / amount-range filters to a query."""
+    if filter_month:
+        query += f" AND strftime('%Y-%m', {date_col}) = ?"
+        params.append(filter_month)
+    if date_from:
+        query += f" AND {date_col} >= ?"
+        params.append(date_from)
+    if date_to:
+        query += f" AND {date_col} <= ?"
+        params.append(date_to + " 23:59:59")
+    if amt_min is not None:
+        query += " AND amount >= ?"
+        params.append(amt_min)
+    if amt_max is not None:
+        query += " AND amount <= ?"
+        params.append(amt_max)
+    return query, params
+
 # --- Cash In Routes ---
 
 @transactions_bp.route("/cash_in", methods=["POST"])
@@ -129,41 +149,61 @@ def history():
     filter_month = request.args.get("month", "")
     filter_cat = request.args.get("category_id", "")
     filter_type = request.args.get("type", "")
-    
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
+    amount_min = request.args.get("amount_min", "")
+    amount_max = request.args.get("amount_max", "")
+    q = request.args.get("q", "").strip()
+
+    def _num(val):
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return None
+
+    amt_min = _num(amount_min)
+    amt_max = _num(amount_max)
+
     expenses = []
     if not filter_type or filter_type == "expense":
         query = "SELECT e.id, e.date, c.name as category_name, c.icon as category_icon, e.amount, e.description, 'expense' as txn_type, e.category_id FROM expenses e JOIN categories c ON e.category_id = c.id WHERE e.user_id = ?"
         params = [uid]
-        if filter_month:
-            query += " AND strftime('%Y-%m', e.date) = ?"
-            params.append(filter_month)
         if filter_cat:
             query += " AND e.category_id = ?"
             params.append(filter_cat)
-        
+        # Search matches note OR category name for expenses
+        if q:
+            query += " AND (LOWER(e.description) LIKE ? OR LOWER(c.name) LIKE ?)"
+            params.extend([f"%{q.lower()}%", f"%{q.lower()}%"])
+        query, params = _apply_range(query, params, "e.date", filter_month, date_from, date_to, amt_min, amt_max)
         expenses_raw = conn.execute(query, params).fetchall()
         expenses = [dict(r) for r in expenses_raw]
-        
+
     incomes = []
-    if not filter_type or filter_type == "income":
-        if not filter_cat:  # incomes don't have category_id
-            query = "SELECT id, date, 'Income' as category_name, '💰' as category_icon, amount, description, 'income' as txn_type, NULL as category_id FROM incomes WHERE user_id = ?"
-            params = [uid]
-            if filter_month:
-                query += " AND strftime('%Y-%m', date) = ?"
-                params.append(filter_month)
-            incomes_raw = conn.execute(query, params).fetchall()
-            incomes = [dict(r) for r in incomes_raw]
+    if (not filter_type or filter_type == "income") and not filter_cat:
+        query = "SELECT id, date, 'Income' as category_name, '💰' as category_icon, amount, description, 'income' as txn_type, NULL as category_id FROM incomes WHERE user_id = ?"
+        params = [uid]
+        if q:
+            query += " AND LOWER(description) LIKE ?"
+            params.append(f"%{q.lower()}%")
+        query, params = _apply_range(query, params, "date", filter_month, date_from, date_to, amt_min, amt_max)
+        incomes_raw = conn.execute(query, params).fetchall()
+        incomes = [dict(r) for r in incomes_raw]
 
     all_txns = sorted(expenses + incomes, key=lambda x: x["date"], reverse=True)
     categories = conn.execute("SELECT * FROM categories ORDER BY name").fetchall()
-    
+
     # Get distinct months
     income_months = conn.execute("SELECT DISTINCT strftime('%Y-%m', date) as m FROM incomes WHERE user_id=?", (uid,)).fetchall()
     expense_months = conn.execute("SELECT DISTINCT strftime('%Y-%m', date) as m FROM expenses WHERE user_id=?", (uid,)).fetchall()
     all_months = sorted(set(r["m"] for r in income_months) | set(r["m"] for r in expense_months), reverse=True)
-    
+
+    total_in = sum(t["amount"] for t in all_txns if t["txn_type"] == "income")
+    total_out = sum(t["amount"] for t in all_txns if t["txn_type"] == "expense")
+
     from flask import render_template
-    return render_template("history.html", transactions=all_txns, categories=categories, 
+    return render_template("history.html", transactions=all_txns, categories=categories,
                            filter_month=filter_month, filter_cat=filter_cat, filter_type=filter_type,
-                           all_months=all_months)
+                           date_from=date_from, date_to=date_to, amount_min=amount_min,
+                           amount_max=amount_max, q=q, all_months=all_months,
+                           total_in=total_in, total_out=total_out, result_count=len(all_txns))

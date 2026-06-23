@@ -1,6 +1,6 @@
 from flask import Flask, render_template, session, redirect, url_for
 from .config import Config
-from .database.connection import close_db
+from .database.connection import close_db, ensure_schema
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -28,6 +28,9 @@ def create_app(config_class=Config):
     from .routes.budgets import budgets_bp
     from .routes.export import export_bp
     from .routes.goals import goals_bp
+    from .routes.home import home_bp
+    from .routes.account import account_bp
+    from .routes.recurring import recurring_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -36,11 +39,17 @@ def create_app(config_class=Config):
     app.register_blueprint(budgets_bp)
     app.register_blueprint(export_bp)
     app.register_blueprint(goals_bp)
+    app.register_blueprint(home_bp)
+    app.register_blueprint(account_bp)
+    app.register_blueprint(recurring_bp)
+
+    # Make sure newer tables exist on both SQLite and Postgres.
+    ensure_schema(app)
 
     @app.route("/")
     def landing():
         if "user_id" in session:
-            return redirect(url_for("dashboard.index"))
+            return redirect(url_for("home.index"))
         return render_template("landing.html")
 
     @app.route("/terms")

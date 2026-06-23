@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Home — Spendly{% endblock %}
+
+{% block content %}
+
+{# ── GREETING ── #}
+<div class="home-hero">
+  <p class="page-eyebrow">{{ curr_month_label }}</p>
+  <h1 class="home-greeting">{{ greeting }}, {{ session.username }}.</h1>
+  <p class="home-sub">Here's where your money stands today.</p>
+</div>
+
+{# ── BUDGET ALERT BANNER ── #}
+{% if monthly_budget > 0 and budget_used_percent >= 80 %}
+<div class="alert-banner {% if budget_used_percent >= 100 %}alert-danger{% else %}alert-warn{% endif %}">
+  <span class="alert-icon">{% if budget_used_percent >= 100 %}⚡{% else %}⚠{% endif %}</span>
+  <div class="alert-body">
+    <strong>{% if budget_used_percent >= 100 %}You're over budget this month.{% else %}You're close to your monthly budget.{% endif %}</strong>
+    <span>You've used <strong>{{ "%.0f"|format(budget_used_percent) }}%</strong> — ৳{{ "%.0f"|format(cm_expense) }} of ৳{{ "%.0f"|format(monthly_budget) }}.</span>
+  </div>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-ghost btn-sm">Review →</a>
+</div>
+{% endif %}
+
+{# ── QUICK STATS ── #}
+<div class="stats-grid">
+  <div class="stat-card s-dark">
+    <span class="stat-bg-icon">💰</span>
+    <p class="stat-label">Total Balance</p>
+    <h2 class="stat-value">৳{{ "%.0f"|format(balance) }}</h2>
+    <p class="stat-trend">Lifetime net savings</p>
+  </div>
+  <div class="stat-card s-success">
+    <span class="stat-bg-icon">📈</span>
+    <p class="stat-label">Income This Month</p>
+    <h2 class="stat-value">৳{{ "%.0f"|format(cm_income) }}</h2>
+    <p class="stat-trend">Received in {{ curr_month_label }}</p>
+  </div>
+  <div class="stat-card s-danger">
+    <span class="stat-bg-icon">📉</span>
+    <p class="stat-label">Spent This Month</p>
+    <h2 class="stat-value">৳{{ "%.0f"|format(cm_expense) }}</h2>
+    <p class="stat-trend">{% if monthly_budget > 0 %}{{ "%.0f"|format(budget_used_percent) }}% of budget{% else %}No budget set{% endif %}</p>
+  </div>
+  <div class="stat-card s-accent">
+    <span class="stat-bg-icon">🏦</span>
+    <p class="stat-label">Saved This Month</p>
+    <h2 class="stat-value">৳{{ "%.0f"|format(cm_saved) }}</h2>
+    <p class="stat-trend">{{ curr_month_label }}</p>
+  </div>
+</div>
+
+{# ── QUICK ACTIONS ── #}
+<p class="section-title" style="margin-top:0.5rem">Quick actions</p>
+<div class="quick-grid">
+  <a href="{{ url_for('dashboard.index') }}" class="quick-card">
+    <span class="quick-icon" style="background:var(--accent-light);color:var(--accent)">＋</span>
+    <span class="quick-label">Add transaction</span>
+    <span class="quick-desc">Record an expense or income</span>
+  </a>
+  <a href="{{ url_for('goals.index') }}" class="quick-card">
+    <span class="quick-icon" style="background:#f0fdf4;color:#16a34a">🎯</span>
+    <span class="quick-label">Savings goals</span>
+    <span class="quick-desc">{{ goal_count }} active goal{{ '' if goal_count == 1 else 's' }}</span>
+  </a>
+  <a href="{{ url_for('analytics.index') }}" class="quick-card">
+    <span class="quick-icon" style="background:#eff6ff;color:#3b82f6">📊</span>
+    <span class="quick-label">Analytics</span>
+    <span class="quick-desc">Trends &amp; insights</span>
+  </a>
+  <a href="{{ url_for('transactions.history') }}" class="quick-card">
+    <span class="quick-icon" style="background:#faf5ff;color:#8b5cf6">🗂️</span>
+    <span class="quick-label">Transactions</span>
+    <span class="quick-desc">Search &amp; filter</span>
+  </a>
+</div>
+
+<div class="home-cols">
+  {# ── GOALS SNAPSHOT ── #}
+  <div class="card card-pad">
+    <div class="home-card-head">
+      <h3 class="card-head-title">Goals</h3>
+      <a href="{{ url_for('goals.index') }}" class="btn btn-ghost btn-sm">View all →</a>
+    </div>
+    {% if top_goals %}
+    <div style="display:flex;flex-direction:column;gap:1.125rem">
+      {% for g in top_goals %}
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.4rem">
+          <span style="font-weight:600;color:var(--ink)">{{ g.name }}</span>
+          <span style="font-size:0.8125rem;color:var(--ink-3);font-variant-numeric:tabular-nums">৳{{ "%.0f"|format(g.current) }} / ৳{{ "%.0f"|format(g.target) }}</span>
+        </div>
+        <div class="goal-progress-bg">
+          <div class="goal-progress-fill" style="width:{{ g.progress }}%;background:{% if g.progress >= 100 %}var(--grad-emerald){% else %}var(--grad-accent){% endif %}"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state" style="padding:1.5rem !important">No goals yet. <a href="{{ url_for('goals.index') }}" style="color:var(--accent);font-weight:600">Create one →</a></p>
+    {% endif %}
+  </div>
+
+  {# ── RECENT ACTIVITY ── #}
+  <div class="card card-pad">
+    <div class="home-card-head">
+      <h3 class="card-head-title">Recent activity</h3>
+      <a href="{{ url_for('transactions.history') }}" class="btn btn-ghost btn-sm">View all →</a>
+    </div>
+    {% if recent %}
+    <div class="activity-list">
+      {% for r in recent %}
+      <div class="activity-row">
+        <span class="activity-icon">{{ r.icon }}</span>
+        <div class="activity-meta">
+          <span class="activity-label">{{ r.label or '—' }}</span>
+          <span class="activity-date">{{ r.date|format_date }}</span>
+        </div>
+        <span class="{% if r.kind == 'income' %}amount-in{% else %}amount-out{% endif %}">
+          {% if r.kind == 'income' %}+{% else %}−{% endif %} ৳{{ "%.0f"|format(r.amount) }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state" style="padding:1.5rem !important">No activity yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

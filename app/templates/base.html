@@ -6,7 +6,7 @@
   <title>{% block title %}Spendly{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   {% block head %}{% endblock %}
 </head>
@@ -15,7 +15,7 @@
 {% if session.get('user_id') %}
 
 <header class="mobile-topbar">
-  <a href="{{ url_for('landing') }}" class="mobile-brand">
+  <a href="{{ url_for('home.index') }}" class="mobile-brand">
     <span class="icon">◈</span> Spendly
   </a>
   <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
@@ -29,15 +29,24 @@
 
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
-    <div class="sb-brand">
+    <a href="{{ url_for('home.index') }}" class="sb-brand" style="text-decoration:none">
       <div class="sb-brand-icon">◈</div>
       <div>
         <div class="sb-brand-name">Spendly</div>
       </div>
       <span class="sb-brand-badge" style="margin-left:auto">Pro</span>
-    </div>
+    </a>
 
     <nav class="sb-nav">
+      <a href="{{ url_for('home.index') }}"
+         class="sb-item {% if request.endpoint == 'home.index' %}active{% endif %}">
+        <span class="sb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 7l6-5 6 5"/><path d="M3.5 6v8h9V6"/>
+          </svg>
+        </span>
+        Home
+      </a>
       <a href="{{ url_for('dashboard.index') }}"
          class="sb-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
         <span class="sb-icon">
@@ -55,7 +64,7 @@
             <line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="10" y2="12"/>
           </svg>
         </span>
-        History
+        Transactions
       </a>
       <a href="{{ url_for('goals.index') }}"
          class="sb-item {% if request.endpoint == 'goals.index' %}active{% endif %}">
@@ -91,13 +100,21 @@
     </nav>
 
     <div class="sb-footer">
-      <div class="sb-user">
+      <a href="{{ url_for('account.index') }}" class="sb-item {% if request.endpoint == 'account.index' %}active{% endif %}">
+        <span class="sb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="8" r="2.25"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M13 3l-1.5 1.5M4.5 11.5L3 13"/>
+          </svg>
+        </span>
+        Settings
+      </a>
+      <a href="{{ url_for('account.index') }}" class="sb-user" style="text-decoration:none">
         <div class="sb-user-avatar">{{ session.username[0]|upper }}</div>
         <div class="sb-user-info">
           <div class="sb-user-name">{{ session.username }}</div>
           <div class="sb-user-role">Personal</div>
         </div>
-      </div>
+      </a>
       <a href="{{ url_for('auth.logout') }}" class="sb-item" style="opacity:0.6;margin-top:2px">
         <span class="sb-icon">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">

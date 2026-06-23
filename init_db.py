@@ -135,6 +135,22 @@ def init_db():
             );
         ''')
 
+        # 8. Recurring Transactions (auto-posted monthly)
+        cur.execute(f'''
+            CREATE TABLE IF NOT EXISTS recurring (
+                id {serial_type} PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                type VARCHAR(10) NOT NULL,
+                category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+                amount DECIMAL(15, 2) NOT NULL,
+                description TEXT,
+                day_of_month INTEGER DEFAULT 1,
+                active INTEGER DEFAULT 1,
+                last_posted VARCHAR(7),
+                created_at {timestamp_type} DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
         # Default Categories
         print("Inserting default categories...")
         categories = [

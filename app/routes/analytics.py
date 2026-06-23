@@ -82,8 +82,15 @@ def index():
         "SELECT COUNT(*) as c FROM incomes WHERE user_id=?", (uid,)
     ).fetchone()["c"]
 
-    monthly_trend = []
-    for m in all_months[:6]:
+    # --- 4-Month trend (selected month + previous 3), gradient area chart ---
+    def _month_shift(ym, delta):
+        y, mo = int(ym[:4]), int(ym[5:7])
+        total = y * 12 + (mo - 1) + delta
+        return f"{total // 12}-{total % 12 + 1:02d}"
+
+    months4 = [_month_shift(selected, d) for d in (-3, -2, -1, 0)]
+    trend_months = []
+    for m in months4:
         m_in = conn.execute(
             "SELECT COALESCE(SUM(amount),0) as t FROM incomes WHERE user_id=? AND strftime('%Y-%m',date)=?",
             (uid, m),
@@ -93,10 +100,10 @@ def index():
             (uid, m),
         ).fetchone()["t"]
         try:
-            label = datetime.strptime(m, "%Y-%m").strftime("%b %Y")
+            label = datetime.strptime(m, "%Y-%m").strftime("%b")
         except ValueError:
             label = m
-        monthly_trend.append({
+        trend_months.append({
             "month": m, "label": label,
             "income": m_in, "expense": m_out, "saved": m_in - m_out,
         })
@@ -137,6 +144,53 @@ def index():
     monthly_budget = budget_row["amount"] if budget_row else 0
     budget_used_percent = round(min(100, (sm_expense / monthly_budget) * 100), 1) if monthly_budget > 0 else 0
 
+    # --- This-month daily trend (income + expense per day) for the 1-month area chart ---
+    import calendar as _cal
+    daily_exp_rows = conn.execute("""
+        SELECT strftime('%d', date) as d, SUM(amount) as total
+        FROM expenses
+        WHERE user_id=? AND strftime('%Y-%m', date)=?
+        GROUP BY strftime('%d', date)
+    """, (uid, selected)).fetchall()
+    daily_exp_map = {str(r["d"]): float(r["total"]) for r in daily_exp_rows}
+    daily_inc_rows = conn.execute("""
+        SELECT strftime('%d', date) as d, SUM(amount) as total
+        FROM incomes
+        WHERE user_id=? AND strftime('%Y-%m', date)=?
+        GROUP BY strftime('%d', date)
+    """, (uid, selected)).fetchall()
+    daily_inc_map = {str(r["d"]): float(r["total"]) for r in daily_inc_rows}
+    try:
+        sel_dt = datetime.strptime(selected, "%Y-%m")
+        days_in_sel = _cal.monthrange(sel_dt.year, sel_dt.month)[1]
+    except ValueError:
+        days_in_sel = 31
+    trend_days = []
+    for d in range(1, days_in_sel + 1):
+        di = daily_inc_map.get(f"{d:02d}", 0)
+        de = daily_exp_map.get(f"{d:02d}", 0)
+        trend_days.append({"day": d, "income": di, "expense": de, "saved": di - de})
+
+    # Category breakdown for the running (selected) month donut
+    cat_donut = [{"name": r["name"], "icon": r["icon"], "total": float(r["total"])} for r in cat_breakdown]
+
+    # Category breakdown aggregated over the last 4 months, for the second donut
+    _ph = ",".join("?" * len(months4))
+    donut_4m_rows = conn.execute(f"""
+        SELECT c.name, c.icon, COALESCE(SUM(e.amount),0) as total
+        FROM categories c JOIN expenses e ON c.id = e.category_id
+        WHERE e.user_id = ? AND strftime('%Y-%m', e.date) IN ({_ph})
+        GROUP BY c.id, c.name, c.icon HAVING COALESCE(SUM(e.amount),0) > 0
+        ORDER BY total DESC
+    """, (uid, *months4)).fetchall()
+    donut_4m = [{"name": r["name"], "icon": r["icon"], "total": float(r["total"])} for r in donut_4m_rows]
+
+    try:
+        range_4m_label = datetime.strptime(months4[0], "%Y-%m").strftime("%b") + " – " + \
+            datetime.strptime(months4[-1], "%Y-%m").strftime("%b %Y")
+    except ValueError:
+        range_4m_label = "Last 4 months"
+
     try:
         selected_label = datetime.strptime(selected, "%Y-%m").strftime("%B %Y")
     except ValueError:
@@ -157,11 +211,15 @@ def index():
         lifetime_saved=total_income - total_expense,
         total_transactions=total_transactions,
         total_cashins=total_cashins,
-        monthly_trend=monthly_trend,
+        trend_months=trend_months,
+        trend_days=trend_days,
+        range_4m_label=range_4m_label,
         mom_change_percent=mom_change_percent,
         top_expenses=top_expenses,
         dow_data=dow_data,
         highest_dow=highest_dow,
         monthly_budget=monthly_budget,
         budget_used_percent=budget_used_percent,
+        cat_donut=cat_donut,
+        donut_4m=donut_4m,
     )

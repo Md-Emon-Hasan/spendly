@@ -73,3 +73,49 @@ def close_db(e=None):
     db_wrapper = g.pop('db', None)
     if db_wrapper is not None:
         db_wrapper.close()
+
+
+def ensure_schema(app):
+    """Create tables that may be missing from older databases (idempotent).
+
+    Runs once at app startup so both fresh SQLite files and the production
+    Postgres database always have the goal_funds and recurring tables.
+    """
+    is_postgres = app.config.get('IS_POSTGRES', False)
+    serial = 'SERIAL' if is_postgres else 'INTEGER'
+    ts = 'TIMESTAMP' if is_postgres else 'DATETIME'
+    statements = [
+        f'''CREATE TABLE IF NOT EXISTS goal_funds (
+            id {serial} PRIMARY KEY,
+            goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
+            amount DECIMAL(15, 2) NOT NULL,
+            added_at {ts} DEFAULT CURRENT_TIMESTAMP
+        );''',
+        f'''CREATE TABLE IF NOT EXISTS recurring (
+            id {serial} PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            type VARCHAR(10) NOT NULL,
+            category_id INTEGER,
+            amount DECIMAL(15, 2) NOT NULL,
+            description TEXT,
+            day_of_month INTEGER DEFAULT 1,
+            active INTEGER DEFAULT 1,
+            last_posted VARCHAR(7),
+            created_at {ts} DEFAULT CURRENT_TIMESTAMP
+        );''',
+    ]
+    try:
+        if is_postgres:
+            if not HAS_PSYCHOG2:
+                return
+            conn = psycopg2.connect(app.config['DATABASE_URI'])
+        else:
+            os.makedirs(os.path.dirname(app.config['DATABASE_SQLITE']), exist_ok=True)
+            conn = sqlite3.connect(app.config['DATABASE_SQLITE'])
+        cur = conn.cursor()
+        for stmt in statements:
+            cur.execute(stmt)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"ensure_schema warning: {e}")

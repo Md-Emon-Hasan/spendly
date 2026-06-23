@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}History — Spendly{% endblock %}
+{% block title %}Transactions — Spendly{% endblock %}
 
 {% block content %}
 
 <div class="page-header">
   <div class="page-header-left">
-    <p class="page-eyebrow">All transactions</p>
-    <h1 class="page-title">History</h1>
+    <p class="page-eyebrow">Income &amp; expenses</p>
+    <h1 class="page-title">Transactions</h1>
   </div>
   <div class="page-header-right">
     <a href="{{ url_for('export.export_transactions') }}" class="btn btn-ghost btn-sm">↓ Export CSV</a>
@@ -14,48 +14,72 @@
 </div>
 
 {# Filters #}
-<div class="card card-pad" style="margin-bottom:1.25rem">
-  <form method="GET" action="{{ url_for('transactions.history') }}"
-        style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
-    <div class="form-group" style="flex:1 1 150px;margin-bottom:0">
-      <label>Month</label>
-      <select name="month" class="form-input">
-        <option value="">All time</option>
-        {% for m in all_months %}
-        <option value="{{ m }}" {% if m==filter_month %}selected{% endif %}>{{ m }}</option>
-        {% endfor %}
-      </select>
+<div class="card card-pad" style="margin-bottom:1rem">
+  <form method="GET" action="{{ url_for('transactions.history') }}">
+    <div class="search-bar-wrap" style="margin-bottom:1rem">
+      <span class="search-icon">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="13.5" y2="13.5"/></svg>
+      </span>
+      <input type="text" name="q" value="{{ q }}" class="search-bar" placeholder="Search notes & categories…" autocomplete="off">
     </div>
-    <div class="form-group" style="flex:1 1 140px;margin-bottom:0">
-      <label>Type</label>
-      <select name="type" class="form-input">
-        <option value="">All types</option>
-        <option value="expense" {% if filter_type=='expense' %}selected{% endif %}>Expense</option>
-        <option value="income" {% if filter_type=='income' %}selected{% endif %}>Income</option>
-      </select>
-    </div>
-    <div class="form-group" style="flex:1 1 180px;margin-bottom:0">
-      <label>Category</label>
-      <select name="category_id" class="form-input">
-        <option value="">All categories</option>
-        {% for c in categories %}
-        <option value="{{ c.id }}" {% if filter_cat==c.id|string %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div style="display:flex;gap:0.5rem;flex-shrink:0;padding-bottom:0.05rem">
-      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-      <a href="{{ url_for('transactions.history') }}" class="btn btn-ghost btn-sm">Clear</a>
+    <div class="filter-grid">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Month</label>
+        <select name="month" class="form-input">
+          <option value="">All time</option>
+          {% for m in all_months %}
+          <option value="{{ m }}" {% if m==filter_month %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Type</label>
+        <select name="type" class="form-input">
+          <option value="">All types</option>
+          <option value="expense" {% if filter_type=='expense' %}selected{% endif %}>Expense</option>
+          <option value="income" {% if filter_type=='income' %}selected{% endif %}>Income</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Category</label>
+        <select name="category_id" class="form-input">
+          <option value="">All categories</option>
+          {% for c in categories %}
+          <option value="{{ c.id }}" {% if filter_cat==c.id|string %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>From date</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-input">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>To date</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-input">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Min ৳</label>
+        <input type="number" step="0.01" name="amount_min" value="{{ amount_min }}" class="form-input" placeholder="0">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Max ৳</label>
+        <input type="number" step="0.01" name="amount_max" value="{{ amount_max }}" class="form-input" placeholder="∞">
+      </div>
+      <div class="form-group" style="margin-bottom:0;display:flex;align-items:flex-end;gap:0.5rem">
+        <button type="submit" class="btn btn-primary btn-sm" style="flex:1">Apply</button>
+        <a href="{{ url_for('transactions.history') }}" class="btn btn-ghost btn-sm">Clear</a>
+      </div>
     </div>
   </form>
 </div>
 
-{# Live search #}
-<div class="search-bar-wrap" style="margin-bottom:1rem">
-  <span class="search-icon">
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="13.5" y2="13.5"/></svg>
-  </span>
-  <input type="text" id="txnSearch" class="search-bar" placeholder="Search by note, category, amount…" autocomplete="off">
+{# Results summary #}
+<div class="result-summary">
+  <span><strong>{{ result_count }}</strong> transaction{{ '' if result_count == 1 else 's' }}</span>
+  <span class="result-sep">·</span>
+  <span class="amount-in">+ ৳{{ "%.0f"|format(total_in) }}</span>
+  <span class="result-sep">·</span>
+  <span class="amount-out">− ৳{{ "%.0f"|format(total_out) }}</span>
 </div>
 
 {# Transactions table #}
@@ -227,18 +251,5 @@ window.addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') ['editExpenseModal','editIncomeModal','deleteModal'].forEach(closeModal);
 });
-
-/* Live search */
-var searchInput = document.getElementById('txnSearch');
-if (searchInput) {
-  searchInput.addEventListener('input', function() {
-    var q = this.value.toLowerCase().trim();
-    var rows = document.querySelectorAll('.dash-table tbody tr');
-    rows.forEach(function(row) {
-      if (!row.querySelector('td')) return;
-      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
-}
 </script>
 {% endblock %}

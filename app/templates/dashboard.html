@@ -7,7 +7,7 @@
 <div class="page-header">
   <div class="page-header-left">
     <p class="page-eyebrow">{{ curr_month_label }}</p>
-    <h1 class="page-title">Good day, {{ session.username }} 👋</h1>
+    <h1 class="page-title">Dashboard</h1>
   </div>
   <div class="page-header-right">
     <button class="btn btn-ghost btn-sm" onclick="openModal('setBudgetModal')">
@@ -24,6 +24,18 @@
     </button>
   </div>
 </div>
+
+{# ── BUDGET ALERT BANNER ── #}
+{% if monthly_budget > 0 and budget_used_percent >= 80 %}
+<div class="alert-banner {% if budget_used_percent >= 100 %}alert-danger{% else %}alert-warn{% endif %}">
+  <span class="alert-icon">{% if budget_used_percent >= 100 %}⚡{% else %}⚠{% endif %}</span>
+  <div class="alert-body">
+    <strong>{% if budget_used_percent >= 100 %}Over budget!{% else %}Approaching your budget limit.{% endif %}</strong>
+    <span>You've used <strong>{{ "%.0f"|format(budget_used_percent) }}%</strong> — ৳{{ "%.0f"|format(cm_expense) }} of ৳{{ "%.0f"|format(monthly_budget) }} this month.</span>
+  </div>
+  <a href="#" onclick="openModal('setBudgetModal');return false" class="btn btn-ghost btn-sm">Adjust</a>
+</div>
+{% endif %}
 
 {# ── FINANCIAL HEALTH SCORE ── #}
 {% set score = health_score %}

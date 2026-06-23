@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Settings — Spendly{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-left">
+    <p class="page-eyebrow">Account</p>
+    <h1 class="page-title">Settings</h1>
+  </div>
+</div>
+
+{# ── PROFILE ── #}
+<div class="card card-pad" style="margin-bottom:1.25rem">
+  <h3 class="card-head-title" style="margin-bottom:1rem">Profile</h3>
+  <div class="profile-row">
+    <div class="profile-avatar">{{ user.name[0]|upper if user and user.name else '?' }}</div>
+    <div>
+      <div style="font-weight:700;color:var(--ink);font-size:1rem">{{ user.name if user else '' }}</div>
+      <div style="color:var(--ink-3);font-size:0.875rem">{{ user.email if user else '' }}</div>
+    </div>
+  </div>
+</div>
+
+{# ── RECURRING TRANSACTIONS ── #}
+<div class="card card-pad" style="margin-bottom:1.25rem">
+  <div class="home-card-head" style="margin-bottom:1rem">
+    <h3 class="card-head-title">Recurring transactions</h3>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addRecurringModal')">+ Add recurring</button>
+  </div>
+  <p style="color:var(--ink-3);font-size:0.8125rem;margin-bottom:1rem;line-height:1.5">
+    Auto-posted once each month on the chosen day (e.g. salary on the 1st, rent on the 5th). They appear in your history tagged <em>(recurring)</em>.
+  </p>
+
+  {% if recurring %}
+  <div class="table-responsive">
+    <table class="dash-table">
+      <thead><tr>
+        <th>Type</th><th>Description</th><th>Category</th>
+        <th class="text-center">Day</th><th class="text-right">Amount</th>
+        <th class="text-center">Status</th><th class="text-right">Actions</th>
+      </tr></thead>
+      <tbody>
+        {% for r in recurring %}
+        <tr style="{% if not r.active %}opacity:0.5{% endif %}">
+          <td>{% if r.type == 'income' %}<span class="tag tag-in">In</span>{% else %}<span class="tag tag-out">Out</span>{% endif %}</td>
+          <td style="font-weight:500">{{ r.description or '—' }}</td>
+          <td>{% if r.type == 'expense' and r.category_name %}<span class="cat-pill">{{ r.category_icon }} {{ r.category_name }}</span>{% else %}—{% endif %}</td>
+          <td class="text-center">{{ r.day_of_month }}</td>
+          <td class="text-right {% if r.type == 'income' %}amount-in{% else %}amount-out{% endif %}">৳{{ "%.0f"|format(r.amount) }}</td>
+          <td class="text-center">
+            <form method="POST" action="{{ url_for('recurring.toggle', id=r.id) }}" class="inline-form">
+              <button type="submit" class="action-btn {% if r.active %}edit-btn{% else %}delete-btn{% endif %}">
+                {% if r.active %}● Active{% else %}○ Paused{% endif %}
+              </button>
+            </form>
+          </td>
+          <td class="text-right actions-cell">
+            <button class="action-btn delete-btn"
+              data-url="{{ url_for('recurring.delete', id=r.id) }}"
+              data-msg="Delete this recurring {{ r.type }}?"
+              onclick="openDeleteModal(this)">✕</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty-state" style="padding:1.5rem !important">No recurring transactions yet.</p>
+  {% endif %}
+</div>
+
+{# ── DANGER ZONE ── #}
+<div class="card card-pad danger-zone">
+  <h3 class="card-head-title" style="color:var(--danger);margin-bottom:0.5rem">Danger zone</h3>
+  <p style="color:var(--ink-3);font-size:0.875rem;margin-bottom:1.25rem">These actions cannot be undone. Please be certain.</p>
+
+  <div class="danger-row">
+    <div>
+      <div style="font-weight:600;color:var(--ink)">Reset all data</div>
+      <div style="color:var(--ink-3);font-size:0.8125rem">Delete {{ counts.expenses }} expenses, {{ counts.incomes }} incomes, {{ counts.goals }} goals and {{ counts.budgets }} budgets. Your account stays.</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="border-color:var(--danger-border);color:var(--danger)" onclick="openModal('resetModal')">Reset data</button>
+  </div>
+
+  <div class="danger-row">
+    <div>
+      <div style="font-weight:600;color:var(--ink)">Delete account</div>
+      <div style="color:var(--ink-3);font-size:0.8125rem">Permanently remove your account and all data. This frees up your email for re-registration.</div>
+    </div>
+    <button class="btn btn-danger btn-sm" onclick="openModal('deleteAccountModal')">Delete account</button>
+  </div>
+</div>
+
+{# ── MODALS ── #}
+
+{# Add recurring #}
+<div id="addRecurringModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Add recurring transaction</h3>
+      <button class="close-btn" onclick="closeModal('addRecurringModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('recurring.add') }}">
+      <div class="modal-body">
+        <div class="form-group"><label>Type</label>
+          <select name="type" class="form-input" id="rec_type" onchange="toggleRecCat()">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select></div>
+        <div class="form-group" id="rec_cat_group"><label>Category</label>
+          <select name="category_id" class="form-input">
+            <option value="">Select category</option>
+            {% for c in categories %}<option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>{% endfor %}
+          </select></div>
+        <div class="form-group"><label>Description</label>
+          <input type="text" name="description" class="form-input" placeholder="e.g. Monthly salary, Rent" autocomplete="off"></div>
+        <div style="display:flex;gap:0.75rem">
+          <div class="form-group" style="flex:1"><label>Amount (৳)</label>
+            <input type="number" step="0.01" name="amount" class="form-input" placeholder="0.00" required min="0.01"></div>
+          <div class="form-group" style="flex:1"><label>Day of month (1–28)</label>
+            <input type="number" name="day_of_month" class="form-input" value="1" min="1" max="28" required></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('addRecurringModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add recurring</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Reset data #}
+<div id="resetModal" class="modal">
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">Reset all data</h3>
+      <button class="close-btn" onclick="closeModal('resetModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('account.reset_data') }}">
+      <div class="modal-body">
+        <p style="color:var(--ink-3);font-size:0.875rem;line-height:1.5;margin-bottom:1rem">This deletes all your transactions, goals and budgets but keeps your login. Type <strong style="color:var(--danger)">RESET</strong> to confirm.</p>
+        <input type="text" name="confirm" class="form-input" placeholder="RESET" autocomplete="off" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('resetModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-danger">Reset data</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Delete account #}
+<div id="deleteAccountModal" class="modal">
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">Delete account</h3>
+      <button class="close-btn" onclick="closeModal('deleteAccountModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('account.delete_account') }}">
+      <div class="modal-body">
+        <p style="color:var(--ink-3);font-size:0.875rem;line-height:1.5;margin-bottom:1rem">This permanently deletes your account and every record. Type <strong style="color:var(--danger)">DELETE</strong> to confirm.</p>
+        <input type="text" name="confirm" class="form-input" placeholder="DELETE" autocomplete="off" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('deleteAccountModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-danger">Delete forever</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Generic delete (for recurring rows) #}
+<div id="deleteModal" class="modal">
+  <div class="modal-content modal-sm">
+    <div class="modal-header" style="border-bottom:none;padding-bottom:0">
+      <button class="close-btn" onclick="closeModal('deleteModal')">&times;</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding-top:0">
+      <div style="width:52px;height:52px;background:var(--danger-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.25rem;color:var(--danger)">✕</div>
+      <h3 style="font-size:1.0625rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink)">Confirm delete</h3>
+      <p id="deleteModalMsg" style="color:var(--ink-3);font-size:0.875rem;line-height:1.5"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" onclick="closeModal('deleteModal')" class="btn btn-ghost">Cancel</button>
+      <form id="deleteModalForm" method="POST" style="display:contents">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal(id){var m=document.getElementById(id);m.style.display='flex';setTimeout(function(){m.classList.add('open');},10);}
+function closeModal(id){var m=document.getElementById(id);m.classList.remove('open');setTimeout(function(){m.style.display='none';},280);}
+function openDeleteModal(btn){
+  document.getElementById('deleteModalMsg').textContent = btn.dataset.msg;
+  document.getElementById('deleteModalForm').action = btn.dataset.url;
+  openModal('deleteModal');
+}
+function toggleRecCat(){
+  var t=document.getElementById('rec_type').value;
+  document.getElementById('rec_cat_group').style.display = (t==='income')?'none':'block';
+}
+window.addEventListener('click',function(e){
+  ['addRecurringModal','resetModal','deleteAccountModal','deleteModal'].forEach(function(id){
+    if(e.target===document.getElementById(id)) closeModal(id);
+  });
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape')['addRecurringModal','resetModal','deleteAccountModal','deleteModal'].forEach(closeModal);
+});
+</script>
+{% endblock %}

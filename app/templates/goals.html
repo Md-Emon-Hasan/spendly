@@ -13,19 +13,6 @@
   </div>
 </div>
 
-{% if monthly_budget > 0 %}
-<div class="budget-section" style="margin-bottom:1.5rem">
-  <div class="budget-header">
-    <span class="budget-title">Monthly Budget</span>
-    <span class="budget-amounts">৳{{ "%.0f"|format(cm_expense|default(0)) }} / ৳{{ "%.0f"|format(monthly_budget) }}</span>
-  </div>
-  <div class="progress-bar-bg" style="height:6px">
-    <div class="progress-fill {% if budget_used_percent > 90 %}p-danger{% elif budget_used_percent > 75 %}p-warning{% else %}p-success{% endif %}"
-         style="width:{{ budget_used_percent }}%"></div>
-  </div>
-</div>
-{% endif %}
-
 {# Goals grid #}
 <div class="goals-grid">
   {% for goal in goals %}
@@ -83,7 +70,11 @@
         {% for f in goal.fund_history %}
         <div class="fund-item">
           <span class="fund-date">{{ f.added_at|format_date }}</span>
+          {% if f.amount < 0 %}
+          <span class="fund-amount fund-out">− ৳{{ "%.2f"|format(f.amount|abs) }}</span>
+          {% else %}
           <span class="fund-amount">+ ৳{{ "%.2f"|format(f.amount) }}</span>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
@@ -95,15 +86,20 @@
     {% endif %}
 
     {# Footer #}
-    <div style="padding-top:0.25rem;display:flex;justify-content:{% if goal.progress >= 100 %}center{% else %}flex-end{% endif %}">
+    <div style="padding-top:0.25rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:space-between">
       {% if goal.progress >= 100 %}
-      <div class="goal-accomplished">🎉 Goal Accomplished!</div>
-      {% else %}
-      <button class="btn btn-primary btn-sm"
-        data-id="{{ goal.id }}"
-        data-name="{{ goal.name }}"
-        onclick="openAddFundsModal(this)">+ Add Funds</button>
-      {% endif %}
+      <div class="goal-accomplished">🎉 Accomplished!</div>
+      {% else %}<span></span>{% endif %}
+      <div style="display:flex;gap:0.5rem">
+        {% if goal.current_amount and goal.current_amount > 0 %}
+        <button class="btn btn-ghost btn-sm"
+          data-id="{{ goal.id }}" data-name="{{ goal.name }}"
+          onclick="openWithdrawModal(this)">− Withdraw</button>
+        {% endif %}
+        <button class="btn btn-primary btn-sm"
+          data-id="{{ goal.id }}" data-name="{{ goal.name }}"
+          onclick="openAddFundsModal(this)">+ Add Funds</button>
+      </div>
     </div>
 
   </div>
@@ -189,6 +185,31 @@
   </div>
 </div>
 
+<div id="withdrawFundsModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Withdraw Funds</h3>
+        <p style="font-size:0.8125rem;color:var(--ink-3);margin-top:2px">Goal: <span id="withdraw_goal_name" style="color:var(--accent);font-weight:600"></span></p>
+      </div>
+      <button class="close-btn" onclick="closeModal('withdrawFundsModal')">&times;</button>
+    </div>
+    <form id="withdrawFundsForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group"><label>Amount (৳)</label>
+          <input type="number" step="0.01" name="amount" class="form-input" placeholder="e.g. 500" required min="0.01"></div>
+        <p style="font-size:0.8125rem;color:var(--ink-3);line-height:1.5;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:0.625rem 0.75rem">
+          Corrects a mistake or takes money back out. Reduces the goal's progress.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('withdrawFundsModal')" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-danger">Withdraw</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="deleteModal" class="modal">
   <div class="modal-content modal-sm">
     <div class="modal-header" style="border-bottom:none;padding-bottom:0">
@@ -219,6 +240,11 @@ function openAddFundsModal(btn) {
   document.getElementById('addFundsForm').action = '/goals/'+btn.dataset.id+'/add_funds';
   openModal('addFundsModal');
 }
+function openWithdrawModal(btn) {
+  document.getElementById('withdraw_goal_name').textContent = btn.dataset.name;
+  document.getElementById('withdrawFundsForm').action = '/goals/'+btn.dataset.id+'/withdraw';
+  openModal('withdrawFundsModal');
+}
 function openEditGoalModal(btn) {
   document.getElementById('edit_goal_name').value = btn.dataset.name;
   document.getElementById('edit_goal_target').value = btn.dataset.target;
@@ -232,12 +258,12 @@ function openDeleteModal(btn) {
   openModal('deleteModal');
 }
 window.addEventListener('click', function(e) {
-  ['addGoalModal','editGoalModal','addFundsModal','deleteModal'].forEach(function(id) {
+  ['addGoalModal','editGoalModal','addFundsModal','withdrawFundsModal','deleteModal'].forEach(function(id) {
     if (e.target === document.getElementById(id)) closeModal(id);
   });
 });
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') ['addGoalModal','editGoalModal','addFundsModal','deleteModal'].forEach(closeModal);
+  if (e.key === 'Escape') ['addGoalModal','editGoalModal','addFundsModal','withdrawFundsModal','deleteModal'].forEach(closeModal);
 });
 </script>
 {% endblock %}
